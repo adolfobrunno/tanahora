@@ -50,7 +50,7 @@ public class ReminderSenderJob {
                     if (event.getResponseReceivedAt() == null &&
                             event.getSentAt() != null &&
                             event.getSentAt().plusMinutes(15).isBefore(now)) {
-                        reminderEventService.updateStatus(event, ReminderEventStatus.SNOOZED);
+                        reminderEventService.updateStatus(event, ReminderEventStatus.MISSED);
                     }
                     if (event.getSnoozedUntil() != null && event.getSnoozedUntil().isAfter(now)) {
                         return;
@@ -63,7 +63,6 @@ public class ReminderSenderJob {
                             .to(reminder.getUser().getWhatsappId())
                             .text(reminderText)
                             .button(new Button().setType(ButtonType.REPLY).setReply(new Reply().setTitle("Tomei").setId("tomei_btn")))
-                            .button(new Button().setType(ButtonType.REPLY).setReply(new Reply().setTitle("Esqueci").setId("esqueci_btn")))
                             .button(new Button().setType(ButtonType.REPLY).setReply(new Reply().setTitle("Adiar").setId("adiar_btn")))
                             .build());
                     reminderEventService.updateDispatch(event, messageId);
@@ -73,7 +72,6 @@ public class ReminderSenderJob {
                             .to(reminder.getUser().getWhatsappId())
                             .text(reminder.createSendReminderMessage())
                             .button(new Button().setType(ButtonType.REPLY).setReply(new Reply().setTitle("Tomei").setId("tomei_btn")))
-                            .button(new Button().setType(ButtonType.REPLY).setReply(new Reply().setTitle("Esqueci").setId("esqueci_btn")))
                             .button(new Button().setType(ButtonType.REPLY).setReply(new Reply().setTitle("Adiar").setId("adiar_btn")))
                             .build());
                     reminderEventService.registerDispatch(reminder, messageId);

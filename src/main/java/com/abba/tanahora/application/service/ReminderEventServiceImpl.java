@@ -28,14 +28,14 @@ public class ReminderEventServiceImpl implements ReminderEventService {
     }
 
     @Override
-    public ReminderEvent registerDispatch(Reminder reminder, String whatsappMessageId) {
+    public void registerDispatch(Reminder reminder, String whatsappMessageId) {
         ReminderEvent event = new ReminderEvent();
         event.setReminder(reminder);
         event.setWhatsappMessageId(whatsappMessageId);
         event.setUserWhatsappId(reminder.getUser().getWhatsappId());
         event.setPatientId(reminder.getPatientId());
         event.setPatientName(reminder.getPatientName());
-        return reminderEventRepository.save(event);
+        reminderEventRepository.save(event);
     }
 
     @Override
@@ -50,11 +50,11 @@ public class ReminderEventServiceImpl implements ReminderEventService {
     }
 
     @Override
-    public ReminderEvent updateDispatch(ReminderEvent event, String whatsappMessageId) {
+    public void updateDispatch(ReminderEvent event, String whatsappMessageId) {
         event.setWhatsappMessageId(whatsappMessageId);
         event.setSentAt(OffsetDateTime.now());
         event.setSnoozedUntil(null);
-        return reminderEventRepository.save(event);
+        reminderEventRepository.save(event);
     }
 
     @Override
@@ -120,7 +120,6 @@ public class ReminderEventServiceImpl implements ReminderEventService {
 
         return switch (messageReceivedType) {
             case REMINDER_RESPONSE_TAKEN -> ReminderEventStatus.TAKEN;
-            case REMINDER_RESPONSE_SKIPPED -> ReminderEventStatus.SKIPPED;
             case REMINDER_RESPONSE_SNOOZED -> ReminderEventStatus.PENDING;
             default -> ReminderEventStatus.MISSED;
         };

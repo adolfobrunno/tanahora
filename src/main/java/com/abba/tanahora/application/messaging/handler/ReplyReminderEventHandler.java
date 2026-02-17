@@ -44,7 +44,6 @@ public class ReplyReminderEventHandler implements HandleAndFlushMessageHandler {
     public boolean supports(AIMessage message, FlowState state) {
         AiMessageProcessorDto dto = messageClassifier.classify(message, state);
         return dto.getType() == MessageReceivedType.REMINDER_RESPONSE_TAKEN ||
-                dto.getType() == MessageReceivedType.REMINDER_RESPONSE_SKIPPED ||
                 dto.getType() == MessageReceivedType.REMINDER_RESPONSE_SNOOZED;
     }
 
@@ -90,7 +89,7 @@ public class ReplyReminderEventHandler implements HandleAndFlushMessageHandler {
         }
 
         ReminderEvent event = reminderEvent.get();
-        if (event.getStatus() == ReminderEventStatus.MISSED) {
+        if (event.getStatus() == ReminderEventStatus.SNOOZED) {
             notificationService.sendNotification(user, BasicWhatsAppMessage.builder()
                     .to(user.getWhatsappId())
                     .message("Limite de 2 adiamentos atingido. Marquei este lembrete como esquecido.")

@@ -9,13 +9,13 @@ import java.util.Optional;
 
 public interface ReminderEventService {
 
-    ReminderEvent registerDispatch(Reminder reminder, String whatsappMessageId);
+    void registerDispatch(Reminder reminder, String whatsappMessageId);
 
     Optional<ReminderEvent> findPendingByReminder(Reminder reminder);
 
     void updateStatus(ReminderEvent reminderEvent, ReminderEventStatus reminderEventStatus);
 
-    ReminderEvent updateDispatch(ReminderEvent event, String whatsappMessageId);
+    void updateDispatch(ReminderEvent event, String whatsappMessageId);
 
     Optional<ReminderEvent> updateStatusFromResponse(String replyToMessageId, String responseText, String userId);
 

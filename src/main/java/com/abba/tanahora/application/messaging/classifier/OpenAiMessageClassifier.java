@@ -6,7 +6,14 @@ import com.abba.tanahora.application.messaging.flow.FlowState;
 import com.abba.tanahora.application.service.OpenAiApiService;
 import org.springframework.stereotype.Component;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.OffsetDateTime;
+import java.util.HexFormat;
+import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Component
 public class OpenAiMessageClassifier implements MessageClassifier {
@@ -14,6 +21,7 @@ public class OpenAiMessageClassifier implements MessageClassifier {
     private static final String CLASSIFICATION_KEY = "classification";
 
     private final OpenAiApiService openAiApiService;
+    private final Map<String, AiMessageProcessorDto> classificationCache = new ConcurrentHashMap<>();
 
     public OpenAiMessageClassifier(OpenAiApiService openAiApiService) {
         this.openAiApiService = openAiApiService;
@@ -21,16 +29,32 @@ public class OpenAiMessageClassifier implements MessageClassifier {
 
     @Override
     public AiMessageProcessorDto classify(AIMessage message, FlowState state) {
-
-        Object cached = state.getContext().get(CLASSIFICATION_KEY);
-        if (cached instanceof AiMessageProcessorDto) {
-            return (AiMessageProcessorDto) cached;
+        String messageHash = this.messageHash(message.getBody());
+        AiMessageProcessorDto cachedByHash = classificationCache.get(messageHash);
+        if (cachedByHash != null) {
+            state.getContext().put(CLASSIFICATION_KEY, cachedByHash);
+            return cachedByHash;
         }
+
         AiMessageProcessorDto dto = this.iaClassify(message);
         if (dto != null) {
-            state.getContext().put(CLASSIFICATION_KEY, dto);
+            AiMessageProcessorDto existing = classificationCache.putIfAbsent(messageHash, dto);
+            AiMessageProcessorDto valueToUse = existing != null ? existing : dto;
+            state.getContext().put(CLASSIFICATION_KEY, valueToUse);
+            return valueToUse;
         }
-        return dto;
+        return null;
+    }
+
+    private String messageHash(String body) {
+        String normalizedBody = Objects.toString(body, "").trim().toLowerCase();
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(normalizedBody.getBytes(StandardCharsets.UTF_8));
+            return HexFormat.of().formatHex(hash);
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 algorithm unavailable", e);
+        }
     }
 
     private AiMessageProcessorDto iaClassify(AIMessage message) {
