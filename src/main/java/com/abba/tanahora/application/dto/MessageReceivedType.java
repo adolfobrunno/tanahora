@@ -9,6 +9,7 @@ public enum MessageReceivedType {
     REMINDER_CANCEL,
     PLAN_UPGRADE,
     PLAN_DOWNGRADE,
+    PLAN_INFO,
     SUPPORT,
     CHECK_NEXT_DISPATCH
 

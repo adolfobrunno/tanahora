@@ -24,9 +24,22 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public void upgradePro(String whatsappId) {
+        applyPremiumCycle(whatsappId, 1);
+    }
+
+    @Override
+    public void applyPremiumCycle(String whatsappId, int months) {
         User user = userRepository.findByWhatsappId(whatsappId).orElseGet(() -> createNewUser(whatsappId, null));
-        user.enablePremium();
+        user.applyPremiumCycle(months);
         userRepository.save(user);
+    }
+
+    @Override
+    public void downgradeToFree(String whatsappId) {
+        userRepository.findByWhatsappId(whatsappId).ifPresent(user -> {
+            user.downgradeToFree();
+            userRepository.save(user);
+        });
     }
 
     @Override

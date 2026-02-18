@@ -48,8 +48,7 @@ public class ReminderSenderJob {
                     ReminderEvent event = pendingEvent.get();
                     OffsetDateTime now = OffsetDateTime.now();
                     if (event.getResponseReceivedAt() == null &&
-                            event.getSentAt() != null &&
-                            event.getSentAt().plusMinutes(15).isBefore(now)) {
+                            reminder.getNextDispatch().plusMinutes(15).isBefore(now)) {
                         reminderEventService.updateStatus(event, ReminderEventStatus.MISSED);
                     }
                     if (event.getSnoozedUntil() != null && event.getSnoozedUntil().isAfter(now)) {

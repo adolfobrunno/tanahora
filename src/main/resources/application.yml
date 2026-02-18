@@ -35,6 +35,19 @@ tanahora:
     enabled: ${TANAHORA_SCHEDULER_ENABLED:true}
     fixed-delay-ms: ${TANAHORA_SCHEDULER_FIXED_DELAY_MS:60000}
     send-reminders-delay-ms: ${TANAHORA_SCHEDULER_SEND_REMINDERS_DELAY_MS:300000}
+  mercadopago:
+    api-base-url: ${TANAHORA_MERCADOPAGO_API_BASE_URL:https://api.mercadopago.com}
+    public-key: ${TANAHORA_MERCADOPAGO_PUBLIC_KEY:}
+    access-token: ${TANAHORA_MERCADOPAGO_ACCESS_TOKEN:}
+    webhook-secret: ${TANAHORA_MERCADOPAGO_WEBHOOK_SECRET:}
+  billing:
+    premium-amount: ${TANAHORA_BILLING_PREMIUM_AMOUNT:9.99}
+    premium-currency: ${TANAHORA_BILLING_PREMIUM_CURRENCY:BRL}
+    premium-interval-months: ${TANAHORA_BILLING_PREMIUM_INTERVAL_MONTHS:1}
+    checkout-expires-hours: ${TANAHORA_BILLING_CHECKOUT_EXPIRES_HOURS:24}
+    checkout-back-url: ${TANAHORA_BILLING_CHECKOUT_BACK_URL:https://tanahora.app}
+    non-renewal-tolerance-days: ${TANAHORA_BILLING_NON_RENEWAL_TOLERANCE_DAYS:1}
+    reconciliation-cron: ${TANAHORA_BILLING_RECONCILIATION_CRON:0 0 3 * * *}
 
 logging:
   level:

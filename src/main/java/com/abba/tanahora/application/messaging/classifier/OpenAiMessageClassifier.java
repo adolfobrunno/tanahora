@@ -83,6 +83,7 @@ public class OpenAiMessageClassifier implements MessageClassifier {
                  - se a mensagem for uma pergunta sobre quando é o próximo lembrete, o type deve ser CHECK_NEXT_DISPATCH
                  - se a mensagem for uma mensagem de suporte, o type deve ser SUPPORT
                  - se a mensagem for solicitando upgrade ou downgrade do plano, o type deve ser PLAN_UPGRADE ou PLAN_DOWNGRADE
+                 - se a mensagem for para consultar o status/informacoes do plano, o type deve ser PLAN_INFO
                 
                 A RRULE deve seguir o padrão iCalendar. Por exemplo: FREQ=DAILY;INTERVAL=1;UNTIL=20260213T000000Z
                 
