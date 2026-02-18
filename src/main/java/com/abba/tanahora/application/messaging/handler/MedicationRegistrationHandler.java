@@ -56,7 +56,8 @@ public class MedicationRegistrationHandler implements HandleAndFlushMessageHandl
         if (dto.getMedication() == null || dto.getMedication().isBlank()) {
             return;
         }
-        if (dto.getRrule() == null || dto.getRrule().isBlank()) {
+        String normalizedRrule = normalizeRrule(dto.getRrule());
+        if (normalizedRrule == null || normalizedRrule.isBlank()) {
             return;
         }
 
@@ -74,7 +75,7 @@ public class MedicationRegistrationHandler implements HandleAndFlushMessageHandl
         medication.setName(dto.getMedication());
         medication.setDosage(dto.getDosage());
         try {
-            Reminder reminder = reminderService.scheduleMedication(user, patient, medication, dto.getRrule());
+            Reminder reminder = reminderService.scheduleMedication(user, patient, medication, normalizedRrule);
             notificationService.sendNotification(user, BasicWhatsAppMessage.builder()
                     .to(user.getWhatsappId())
                     .message(reminder.createNewReminderMessage())
@@ -108,5 +109,20 @@ public class MedicationRegistrationHandler implements HandleAndFlushMessageHandl
         }
         this.flush(state);
 
+    }
+
+    private String normalizeRrule(String rrule) {
+        if (rrule == null) {
+            return null;
+        }
+        String trimmed = rrule.trim();
+        if (trimmed.isEmpty()) {
+            return null;
+        }
+        if (trimmed.regionMatches(true, 0, "RRULE:", 0, "RRULE:".length())) {
+            String withoutPrefix = trimmed.substring("RRULE:".length()).trim();
+            return withoutPrefix.isEmpty() ? null : withoutPrefix;
+        }
+        return trimmed;
     }
 }

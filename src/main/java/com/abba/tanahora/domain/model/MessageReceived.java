@@ -15,8 +15,14 @@ public class MessageReceived {
     private String id;
     private String whatsappId;
     private String contactName;
+    private String messageType;
     private String message;
+    private String interactiveButtonId;
     private String repliedTo;
+    private String mediaId;
+    private String mediaMimeType;
+    private String mediaFilename;
+    private String mediaSha256;
     private MessageReceivedStatus status = MessageReceivedStatus.PENDING;
     private OffsetDateTime receivedAt = OffsetDateTime.now();
     private OffsetDateTime processedAt;

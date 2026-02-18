@@ -61,7 +61,6 @@ public class WhatsAppWebhookController {
         }
         try {
             JsonNode root = objectMapper.readTree(body);
-            // Typical structure from Meta: entry[].changes[].value.messages[], value.contacts[]
             if (root.has("entry") && root.get("entry").isArray()) {
                 for (JsonNode entry : root.get("entry")) {
                     JsonNode changes = entry.path("changes");
@@ -69,7 +68,6 @@ public class WhatsAppWebhookController {
                     for (JsonNode change : changes) {
                         JsonNode value = change.path("value");
 
-                        // Extrai nome do contato do primeiro elemento de contacts[]
                         String contactName = null;
                         JsonNode contacts = value.path("contacts");
                         if (contacts.isArray() && !contacts.isEmpty()) {
@@ -82,37 +80,64 @@ public class WhatsAppWebhookController {
                             String messageId = text(msg, "id");
                             String from = text(msg, "from");
                             String replyToMessageId = msg.path("context").path("id").asText(null);
-
-                            // Support both text and interactive (button/list) messages
-                            String bodyText;
                             String type = msg.path("type").asText(null);
+
+                            String bodyText = null;
+                            String interactiveButtonId = null;
+                            String mediaId = null;
+                            String mediaMimeType = null;
+                            String mediaFilename = null;
+                            String mediaSha256 = null;
+
                             if ("interactive".equals(type)) {
                                 JsonNode interactive = msg.path("interactive");
-                                // Prefer human-readable title; fallback to id
                                 String btnTitle = interactive.path("button_reply").path("title").asText(null);
                                 String btnId = interactive.path("button_reply").path("id").asText(null);
                                 String listTitle = interactive.path("list_reply").path("title").asText(null);
                                 String listId = interactive.path("list_reply").path("id").asText(null);
-                                bodyText = firstNonBlank(btnTitle, btnId, listTitle, listId);
+                                bodyText = firstNonBlank(btnTitle, listTitle, btnId, listId);
+                                interactiveButtonId = firstNonBlank(btnId, listId);
+                            } else if ("image".equals(type)) {
+                                JsonNode image = msg.path("image");
+                                mediaId = image.path("id").asText(null);
+                                mediaMimeType = image.path("mime_type").asText(null);
+                                mediaSha256 = image.path("sha256").asText(null);
+                                bodyText = image.path("caption").asText(null);
+                            } else if ("document".equals(type)) {
+                                JsonNode document = msg.path("document");
+                                mediaId = document.path("id").asText(null);
+                                mediaMimeType = document.path("mime_type").asText(null);
+                                mediaFilename = document.path("filename").asText(null);
+                                mediaSha256 = document.path("sha256").asText(null);
+                                bodyText = document.path("caption").asText(null);
                             } else {
                                 bodyText = msg.path("text").path("body").asText(null);
                             }
 
-                            // Adiciona ao log o nome do contato, se disponível
-                            if (messageId == null || from == null || bodyText == null || bodyText.isBlank()) {
-                                log.debug("Skipping message due to missing fields: id={} from={} textPresent={} contactName={} type={}", messageId, mask(from), bodyText != null && !bodyText.isBlank(), contactName, type);
+                            boolean hasMedia = mediaId != null && !mediaId.isBlank();
+                            boolean hasText = bodyText != null && !bodyText.isBlank();
+                            if (messageId == null || from == null || (!hasText && !hasMedia)) {
+                                log.debug("Skipping message due to missing fields: id={} from={} textPresent={} contactName={} type={}", messageId, mask(from), hasText, contactName, type);
                                 continue;
                             }
 
                             MessageReceived messageReceived = new MessageReceived();
                             messageReceived.setWhatsappId(from);
-                            messageReceived.setMessage(bodyText);
-                            messageReceived.setRepliedTo(replyToMessageId);
                             messageReceived.setContactName(contactName);
                             messageReceived.setId(messageId);
+                            messageReceived.setRepliedTo(replyToMessageId);
+                            messageReceived.setMessageType(type);
+                            messageReceived.setMessage(bodyText);
+                            messageReceived.setInteractiveButtonId(interactiveButtonId);
+                            messageReceived.setMediaId(mediaId);
+                            messageReceived.setMediaMimeType(mediaMimeType);
+                            messageReceived.setMediaFilename(mediaFilename);
+                            messageReceived.setMediaSha256(mediaSha256);
                             messageReceivedService.receiveMessage(messageReceived);
 
-                            log.info("Persisted WhatsApp message id={} from={} contactName={} type={} length={}", messageId, mask(from), contactName, type == null ? "text" : type, bodyText.length());
+                            log.info("Persisted WhatsApp message id={} from={} contactName={} type={} length={} media={}",
+                                    messageId, mask(from), contactName, type == null ? "text" : type,
+                                    bodyText == null ? 0 : bodyText.length(), hasMedia);
                         }
                     }
                 }
