@@ -7,6 +7,7 @@ import java.util.List;
 public interface MessageReceivedService {
 
     void markAsProcessed(String id);
+    void markAsError(String id);
 
     List<MessageReceived> getPendingMessages();
 

@@ -33,6 +33,15 @@ public class MessageReceivedServiceImpl implements MessageReceivedService {
     }
 
     @Override
+    public void markAsError(String id) {
+        messageReceivedRepository.findById(id)
+                .ifPresent(messageReceived -> {
+                    messageReceived.markAsError();
+                    messageReceivedRepository.save(messageReceived);
+                });
+    }
+
+    @Override
     public List<MessageReceived> getPendingMessages() {
         return messageReceivedRepository.findAllPending();
     }

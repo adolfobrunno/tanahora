@@ -47,7 +47,7 @@ tanahora:
     billing-type: ${TANAHORA_ASAAS_BILLING_TYPE:UNDEFINED}
     default-customer-id: ${TANAHORA_ASAAS_DEFAULT_CUSTOMER_ID:}
   billing:
-    gateway: ${TANAHORA_BILLING_GATEWAY:asaas}
+    gateway: ${TANAHORA_BILLING_GATEWAY:mercadopago}
     premium-amount: ${TANAHORA_BILLING_PREMIUM_AMOUNT:9.99}
     premium-currency: ${TANAHORA_BILLING_PREMIUM_CURRENCY:BRL}
     premium-interval-months: ${TANAHORA_BILLING_PREMIUM_INTERVAL_MONTHS:1}

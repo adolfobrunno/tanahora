@@ -32,6 +32,7 @@ public class MessageReceivedJob {
                 messageReceivedService.markAsProcessed(message.getId());
             } catch (Exception e) {
                 log.error("Failed to process message id={} whatsappId={}", message.getId(), message.getWhatsappId(), e);
+                messageReceivedService.markAsError(message.getId());
             }
         }
     }

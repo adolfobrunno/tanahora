@@ -1,10 +1,7 @@
 package com.abba.tanahora.application.messaging.handler;
 
-import com.abba.tanahora.application.dto.AiMessageProcessorDto;
-import com.abba.tanahora.application.dto.MessageReceivedType;
 import com.abba.tanahora.application.dto.UpgradeCheckoutResult;
 import com.abba.tanahora.application.messaging.AIMessage;
-import com.abba.tanahora.application.messaging.classifier.MessageClassifier;
 import com.abba.tanahora.application.notification.BasicWhatsAppMessage;
 import com.abba.tanahora.domain.model.PendingUserAction;
 import com.abba.tanahora.domain.model.User;
@@ -15,36 +12,38 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
-import java.time.OffsetDateTime;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Component
-@Order(500)
+@Order(95)
 @RequiredArgsConstructor
-public class PlanUpgradeHandler implements MessageHandler {
+public class PendingUpgradeEmailHandler implements MessageHandler {
+
+    private static final Pattern EMAIL_PATTERN = Pattern.compile("[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}", Pattern.CASE_INSENSITIVE);
 
     private final UserService userService;
-    private final MessageClassifier messageClassifier;
-    private final NotificationService notificationService;
     private final SubscriptionService subscriptionService;
+    private final NotificationService notificationService;
 
     @Override
     public boolean supports(AIMessage message) {
-        AiMessageProcessorDto classify = messageClassifier.classify(message);
-        return classify.getType() == MessageReceivedType.PLAN_UPGRADE;
+        if (message == null || message.getWhatsappId() == null || message.getWhatsappId().isBlank()) {
+            return false;
+        }
+        User user = userService.findByWhatsappId(message.getWhatsappId());
+        return user != null && user.getPendingAction() == PendingUserAction.UPGRADE_EMAIL;
     }
 
     @Override
     public void handle(AIMessage message) {
-
-        String userId = message.getWhatsappId();
-        User user = userService.findByWhatsappId(userId);
+        User user = userService.findByWhatsappId(message.getWhatsappId());
         if (user == null) {
-            user = userService.register(userId, message.getContactName());
+            return;
         }
-        if (user.getEmail() == null || user.getEmail().isBlank()) {
-            user.setPendingAction(PendingUserAction.UPGRADE_EMAIL);
-            user.setPendingActionCreatedAt(OffsetDateTime.now());
-            userService.save(user);
+
+        String email = extractEmail(message.getBody());
+        if (email == null) {
             notificationService.sendNotification(user,
                     BasicWhatsAppMessage.builder()
                             .to(user.getWhatsappId())
@@ -53,14 +52,29 @@ public class PlanUpgradeHandler implements MessageHandler {
             return;
         }
 
-        UpgradeCheckoutResult checkout = subscriptionService.createOrReuseUpgradeLink(userId, message.getContactName());
-        String responseMessage = buildResponseMessage(checkout);
+        user.setEmail(email);
+        user.setPendingAction(null);
+        user.setPendingActionCreatedAt(null);
+        userService.save(user);
 
+        UpgradeCheckoutResult checkout = subscriptionService.createOrReuseUpgradeLink(user.getWhatsappId(), message.getContactName());
+        String responseMessage = buildResponseMessage(checkout);
         notificationService.sendNotification(user,
                 BasicWhatsAppMessage.builder()
                         .to(user.getWhatsappId())
                         .message(responseMessage)
                         .build());
+    }
+
+    private String extractEmail(String text) {
+        if (text == null || text.isBlank()) {
+            return null;
+        }
+        Matcher matcher = EMAIL_PATTERN.matcher(text);
+        if (!matcher.find()) {
+            return null;
+        }
+        return matcher.group(0);
     }
 
     private String buildResponseMessage(UpgradeCheckoutResult checkout) {

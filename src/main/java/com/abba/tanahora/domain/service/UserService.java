@@ -13,4 +13,6 @@ public interface UserService {
 
     User findByWhatsappId(String whatsappId);
 
+    User save(User user);
+
 }

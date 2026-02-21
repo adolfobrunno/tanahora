@@ -460,7 +460,20 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         notificationService.sendNotification(user,
                 BasicWhatsAppMessage.builder()
                         .to(user.getWhatsappId())
-                        .message("Deu tudo certo com seu pagamento 🤩. Aproveite todas as vantagens do plano Premium!")
+                        .message("""
+                                Deu tudo certo com seu pagamento 🤩. Aproveite todas as vantagens do plano Premium!
+                                
+                                Veja o que você ganha com o plano Premium:
+                                
+                                - Lembretes ilimitados
+                                - Histórico de medicamentos tomados
+                                - Múltiplos pacientes
+                                - Leitura automática de receitas médicas
+                                - Suporte prioritário
+                                
+                                E muito mais em breve 🚀
+                                
+                                """)
                         .build());
     }
 

@@ -45,6 +45,14 @@ public class UserServiceImpl implements UserService {
         return userRepository.findByWhatsappId(whatsappId).orElse(null);
     }
 
+    @Override
+    public User save(User user) {
+        if (user == null) {
+            throw new IllegalArgumentException("user cannot be null");
+        }
+        return userRepository.save(user);
+    }
+
     private User updateNameIfProvided(User user, String name) {
         if (name != null && !name.isBlank()) {
             user.setName(name);

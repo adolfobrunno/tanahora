@@ -20,10 +20,13 @@ public class User {
     @Indexed
     private String whatsappId;
     private String name;
+    private String email;
     private Plan plan = Plan.FREE;
     private OffsetDateTime proUntil;
     private OffsetDateTime proSince;
     private OffsetDateTime createdAt = OffsetDateTime.now();
+    private PendingUserAction pendingAction;
+    private OffsetDateTime pendingActionCreatedAt;
 
     private List<PatientRef> patients = new ArrayList<>();
 

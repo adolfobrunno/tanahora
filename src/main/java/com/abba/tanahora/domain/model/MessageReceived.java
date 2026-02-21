@@ -35,4 +35,9 @@ public class MessageReceived {
         this.processedAt = OffsetDateTime.now();
     }
 
+    public void markAsError() {
+        this.status = MessageReceivedStatus.ERROR;
+        this.processedAt = OffsetDateTime.now();
+    }
+
 }

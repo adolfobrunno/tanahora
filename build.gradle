@@ -42,6 +42,7 @@ dependencies {
     implementation 'org.dmfs:lib-recur:0.17.1'
     implementation 'org.apache.pdfbox:pdfbox:3.0.3'
     implementation 'com.asaas:api-sdk:1.0.3'
+    implementation 'com.mercadopago:sdk-java:2.8.0'
 
 
     compileOnly 'org.projectlombok:lombok'
