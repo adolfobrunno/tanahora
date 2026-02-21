@@ -13,14 +13,13 @@ public class MessageChain {
 
     private final List<MessageHandler> handlers;
 
-    public boolean process(AIMessage message) {
+    public void process(AIMessage message) {
 
         for (MessageHandler handler : handlers) {
             if (handler.supports(message)) {
                 handler.handle(message);
-                return true;
+                return;
             }
         }
-        return false;
     }
 }
