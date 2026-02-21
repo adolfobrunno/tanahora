@@ -7,6 +7,10 @@ import java.time.OffsetDateTime;
 
 public interface BillingGateway {
 
+    default String gatewayCode() {
+        return "UNKNOWN";
+    }
+
     SubscriptionData createRecurringSubscription(
             User user,
             BigDecimal amount,
@@ -26,7 +30,8 @@ public interface BillingGateway {
             String status,
             String checkoutUrl,
             String externalReference,
-            OffsetDateTime nextPaymentDate
+            OffsetDateTime nextPaymentDate,
+            String paymentLinkId
     ) {
     }
 
@@ -35,7 +40,8 @@ public interface BillingGateway {
             String status,
             String subscriptionId,
             String externalReference,
-            OffsetDateTime approvedAt
+            OffsetDateTime approvedAt,
+            String paymentLinkId
     ) {
     }
 }

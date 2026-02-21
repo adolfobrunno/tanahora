@@ -11,6 +11,7 @@ import java.math.BigDecimal;
 @Data
 public class BillingProperties {
 
+    private String gateway = "mercadopago";
     private BigDecimal premiumAmount = new BigDecimal("9.99");
     private String premiumCurrency = "BRL";
     private int premiumIntervalMonths = 1;

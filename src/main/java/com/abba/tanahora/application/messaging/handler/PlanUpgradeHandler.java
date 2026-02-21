@@ -60,14 +60,14 @@ public class PlanUpgradeHandler implements HandleAndFlushMessageHandler {
 
     private String buildResponseMessage(UpgradeCheckoutResult checkout) {
         if (checkout.alreadyPremium()) {
-            return "Seu plano Premium já está ativo. Obrigado por seguir com a gente.";
+            return "Seu plano Premium ja esta ativo. Obrigado por seguir com a gente.";
         }
         if (checkout.checkoutUrl() == null || checkout.checkoutUrl().isBlank()) {
-            return "Não consegui gerar seu link de pagamento agora. Tente novamente em alguns minutos.";
+            return "Nao consegui gerar seu link de pagamento agora. Tente novamente em alguns minutos.";
         }
 
         return String.format("""
-                Oi, que bom que está gostando.
+                Oi, que bom que esta gostando.
                 Para concluir seu upgrade para o Premium, acesse:
                 %s
                 

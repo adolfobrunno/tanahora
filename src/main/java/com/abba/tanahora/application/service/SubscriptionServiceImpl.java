@@ -94,6 +94,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         subscription.setIntervalMonths(billingProperties.getPremiumIntervalMonths());
         subscription.setStatus(mapSubscriptionStatus(created.status()));
         subscription.setGatewaySubscriptionId(created.id());
+        subscription.setGatewayPaymentLinkId(created.paymentLinkId());
         subscription.setCheckoutUrl(created.checkoutUrl());
         subscription.setCheckoutExpiresAt(expiresAt);
         subscription.setNextBillingAt(created.nextPaymentDate());
@@ -147,18 +148,28 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 
     @Override
     public void handleMercadoPagoWebhook(String eventKey, String eventType, String resourceId, String payload) {
+        handleWebhook("MERCADO_PAGO", eventKey, eventType, resourceId, payload);
+    }
+
+    @Override
+    public void handleAsaasWebhook(String eventKey, String eventType, String resourceId, String payload) {
+        handleWebhook("ASAAS", eventKey, eventType, resourceId, payload);
+    }
+
+    private void handleWebhook(String gateway, String eventKey, String eventType, String resourceId, String payload) {
         if (eventKey == null || eventKey.isBlank()) {
             log.debug("Ignoring webhook with missing eventKey");
             return;
         }
-        if (paymentEventRepository.existsByEventKey(eventKey)) {
-            log.debug("Ignoring duplicate webhook eventKey={}", eventKey);
+        String scopedEventKey = gateway + ":" + eventKey.trim();
+        if (paymentEventRepository.existsByEventKey(scopedEventKey)) {
+            log.debug("Ignoring duplicate webhook gateway={} eventKey={}", gateway, eventKey);
             return;
         }
 
         PaymentEvent event = new PaymentEvent();
-        event.setEventKey(eventKey);
-        event.setGateway("MERCADO_PAGO");
+        event.setEventKey(scopedEventKey);
+        event.setGateway(gateway);
         event.setEventType(eventType);
         event.setResourceId(resourceId);
         event.setPayload(payload);
@@ -171,8 +182,8 @@ public class SubscriptionServiceImpl implements SubscriptionService {
             event.setProcessedAt(OffsetDateTime.now());
             paymentEventRepository.save(event);
         } catch (Exception e) {
-            log.error("Failed to process Mercado Pago webhook eventKey={} type={} resourceId={} reason={}",
-                    eventKey, eventType, resourceId, e.getMessage(), e);
+            log.error("Failed to process {} webhook eventKey={} type={} resourceId={} reason={}",
+                    gateway, eventKey, eventType, resourceId, e.getMessage(), e);
         }
     }
 
@@ -199,11 +210,20 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     private void syncSubscription(String gatewaySubscriptionId) {
         BillingGateway.SubscriptionData data = billingGateway.getSubscription(gatewaySubscriptionId);
         Subscription subscription = subscriptionRepository.findByGatewaySubscriptionId(gatewaySubscriptionId)
-                .orElseGet(() -> createFromGatewaySubscription(data));
+                .orElseGet(() -> findSubscriptionCandidateForGatewaySync(data).orElseGet(() -> createFromGatewaySubscription(data)));
 
         SubscriptionStatus previousStatus = subscription.getStatus();
-        subscription.setStatus(mapSubscriptionStatus(data.status()));
-        subscription.setGatewaySubscriptionId(data.id());
+        SubscriptionStatus mappedStatus = mapSubscriptionStatus(data.status());
+        if (shouldKeepPendingUntilPayment(subscription, mappedStatus)) {
+            mappedStatus = SubscriptionStatus.PENDING;
+        }
+        subscription.setStatus(mappedStatus);
+        if (data.id() != null && !data.id().isBlank()) {
+            subscription.setGatewaySubscriptionId(data.id());
+        }
+        if (data.paymentLinkId() != null && !data.paymentLinkId().isBlank()) {
+            subscription.setGatewayPaymentLinkId(data.paymentLinkId());
+        }
         if (data.checkoutUrl() != null && !data.checkoutUrl().isBlank()) {
             subscription.setCheckoutUrl(data.checkoutUrl());
         }
@@ -223,6 +243,12 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         if (previousStatus != subscription.getStatus() && subscription.getStatus() == SubscriptionStatus.CANCELED) {
             notifyDowngradeConfirmed(subscription.getWhatsappId());
         }
+    }
+
+    private boolean shouldKeepPendingUntilPayment(Subscription subscription, SubscriptionStatus mappedStatus) {
+        return mappedStatus == SubscriptionStatus.ACTIVE
+                && subscription.getLastPaymentId() == null
+                && subscription.getLastChargeApprovedAt() == null;
     }
 
     private void syncPayment(String paymentId) {
@@ -335,6 +361,9 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         }
         try {
             BillingGateway.SubscriptionData cancelled = billingGateway.cancelSubscription(gatewaySubscriptionId);
+            if (cancelled.id() != null && !cancelled.id().isBlank()) {
+                subscription.setGatewaySubscriptionId(cancelled.id());
+            }
             subscription.setStatus(mapSubscriptionStatus(cancelled.status()));
             if (subscription.getStatus() == SubscriptionStatus.CANCELED || subscription.getStatus() == SubscriptionStatus.EXPIRED) {
                 if (subscription.getCancellationConfirmedAt() == null) {
@@ -355,6 +384,12 @@ public class SubscriptionServiceImpl implements SubscriptionService {
                 return bySubscriptionId;
             }
         }
+        if (payment.paymentLinkId() != null && !payment.paymentLinkId().isBlank()) {
+            Optional<Subscription> byPaymentLinkId = subscriptionRepository.findByGatewayPaymentLinkId(payment.paymentLinkId());
+            if (byPaymentLinkId.isPresent()) {
+                return byPaymentLinkId;
+            }
+        }
         if (payment.externalReference() != null && !payment.externalReference().isBlank()) {
             return subscriptionRepository.findTopByWhatsappIdOrderByCreatedAtDesc(payment.externalReference());
         }
@@ -373,6 +408,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         subscription.setCurrency(billingProperties.getPremiumCurrency());
         subscription.setIntervalMonths(billingProperties.getPremiumIntervalMonths());
         subscription.setGatewaySubscriptionId(data.id());
+        subscription.setGatewayPaymentLinkId(data.paymentLinkId());
         subscription.setCheckoutUrl(data.checkoutUrl());
         subscription.setStatus(mapSubscriptionStatus(data.status()));
         subscription.setNextBillingAt(data.nextPaymentDate());
@@ -387,11 +423,27 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         return switch (status.toLowerCase()) {
             case "authorized", "active" -> SubscriptionStatus.ACTIVE;
             case "paused", "pending" -> SubscriptionStatus.PENDING;
-            case "cancelled", "canceled" -> SubscriptionStatus.CANCELED;
+            case "cancelled", "canceled", "inactive" -> SubscriptionStatus.CANCELED;
             case "expired" -> SubscriptionStatus.EXPIRED;
             case "past_due" -> SubscriptionStatus.PAST_DUE;
             default -> SubscriptionStatus.FAILED;
         };
+    }
+
+    private Optional<Subscription> findSubscriptionCandidateForGatewaySync(BillingGateway.SubscriptionData data) {
+        if (data.paymentLinkId() != null && !data.paymentLinkId().isBlank()) {
+            Optional<Subscription> byPaymentLinkId = subscriptionRepository.findByGatewayPaymentLinkId(data.paymentLinkId());
+            if (byPaymentLinkId.isPresent()) {
+                return byPaymentLinkId;
+            }
+        }
+        if (data.externalReference() != null && !data.externalReference().isBlank()) {
+            return subscriptionRepository.findTopByWhatsappIdAndStatusInOrderByCreatedAtDesc(
+                    data.externalReference(),
+                    REUSABLE_PENDING_STATUSES
+            );
+        }
+        return Optional.empty();
     }
 
     private boolean hasCheckoutLink(Subscription subscription) {

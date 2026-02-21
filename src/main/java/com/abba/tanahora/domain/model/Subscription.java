@@ -31,6 +31,8 @@ public class Subscription {
 
     @Indexed
     private String gatewaySubscriptionId;
+    @Indexed
+    private String gatewayPaymentLinkId;
     private String checkoutUrl;
     private OffsetDateTime checkoutExpiresAt;
     private OffsetDateTime activatedAt;

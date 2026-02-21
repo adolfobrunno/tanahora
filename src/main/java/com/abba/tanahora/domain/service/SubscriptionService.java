@@ -14,5 +14,7 @@ public interface SubscriptionService {
 
     void handleMercadoPagoWebhook(String eventKey, String eventType, String resourceId, String payload);
 
+    void handleAsaasWebhook(String eventKey, String eventType, String resourceId, String payload);
+
     void runDailyReconciliation();
 }

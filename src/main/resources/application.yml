@@ -40,7 +40,14 @@ tanahora:
     public-key: ${TANAHORA_MERCADOPAGO_PUBLIC_KEY:}
     access-token: ${TANAHORA_MERCADOPAGO_ACCESS_TOKEN:}
     webhook-secret: ${TANAHORA_MERCADOPAGO_WEBHOOK_SECRET:}
+  asaas:
+    api-base-url: ${TANAHORA_ASAAS_API_BASE_URL:https://sandbox.asaas.com/api}
+    api-key: ${TANAHORA_ASAAS_API_KEY:}
+    webhook-token: ${TANAHORA_ASAAS_WEBHOOK_TOKEN:whsec_mhDGQTFtq0-KNMTsCxGPFHPwBXZ3DvGIOIKW_J_Ti7U}
+    billing-type: ${TANAHORA_ASAAS_BILLING_TYPE:UNDEFINED}
+    default-customer-id: ${TANAHORA_ASAAS_DEFAULT_CUSTOMER_ID:}
   billing:
+    gateway: ${TANAHORA_BILLING_GATEWAY:asaas}
     premium-amount: ${TANAHORA_BILLING_PREMIUM_AMOUNT:9.99}
     premium-currency: ${TANAHORA_BILLING_PREMIUM_CURRENCY:BRL}
     premium-interval-months: ${TANAHORA_BILLING_PREMIUM_INTERVAL_MONTHS:1}

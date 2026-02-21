@@ -1,7 +1,7 @@
 package com.abba.tanahora.application.service;
 
 import com.abba.tanahora.domain.model.User;
-import com.abba.tanahora.domain.service.BillingGateway;
+import com.abba.tanahora.domain.service.SelectableBillingGateway;
 import com.abba.tanahora.infrastructure.config.BillingProperties;
 import com.abba.tanahora.infrastructure.config.MercadoPagoProperties;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -9,8 +9,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import okhttp3.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.core.env.Environment;
-import org.springframework.core.env.Profiles;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -21,26 +19,21 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 @Service
-public class MercadoPagoBillingGateway implements BillingGateway {
+public class MercadoPagoBillingGateway implements SelectableBillingGateway {
 
     private static final Logger log = LoggerFactory.getLogger(MercadoPagoBillingGateway.class);
     private static final MediaType JSON = MediaType.parse("application/json; charset=utf-8");
-    private static final String LOCAL_TEST_PAYER_EMAIL = "test_user_9121493611809220014@testuser.com";
-
     private final MercadoPagoProperties mercadoPagoProperties;
     private final BillingProperties billingProperties;
     private final ObjectMapper objectMapper;
-    private final Environment environment;
     private final OkHttpClient httpClient = new OkHttpClient();
 
     public MercadoPagoBillingGateway(MercadoPagoProperties mercadoPagoProperties,
                                      BillingProperties billingProperties,
-                                     ObjectMapper objectMapper,
-                                     Environment environment) {
+                                     ObjectMapper objectMapper) {
         this.mercadoPagoProperties = mercadoPagoProperties;
         this.billingProperties = billingProperties;
         this.objectMapper = objectMapper;
-        this.environment = environment;
     }
 
     @Override
@@ -54,7 +47,6 @@ public class MercadoPagoBillingGateway implements BillingGateway {
             Map<String, Object> payload = new LinkedHashMap<>();
             payload.put("reason", "TaNaHora Premium");
             payload.put("external_reference", user.getWhatsappId());
-            payload.put("payer_email", resolvePayerEmail(user));
             payload.put("back_url", billingProperties.getCheckoutBackUrl());
             payload.put("status", "pending");
             payload.put("date_of_expiration", checkoutExpiresAt.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME));
@@ -65,14 +57,15 @@ public class MercadoPagoBillingGateway implements BillingGateway {
                     "currency_id", currency
             ));
 
-            String responseBody = executeRequest("POST", "/preapproval", objectMapper.writeValueAsString(payload));
+            String responseBody = executeRequest("POST", "/subscriptions", objectMapper.writeValueAsString(payload));
             JsonNode root = objectMapper.readTree(responseBody);
             return new SubscriptionData(
                     root.path("id").asText(null),
                     root.path("status").asText(null),
                     firstNonBlank(root.path("init_point").asText(null), root.path("sandbox_init_point").asText(null)),
                     root.path("external_reference").asText(user.getWhatsappId()),
-                    parseOffsetDateTime(root.path("next_payment_date").asText(null))
+                    parseOffsetDateTime(root.path("next_payment_date").asText(null)),
+                    null
             );
         } catch (IOException e) {
             throw new IllegalStateException("Failed to create Mercado Pago subscription", e);
@@ -83,14 +76,15 @@ public class MercadoPagoBillingGateway implements BillingGateway {
     public SubscriptionData getSubscription(String subscriptionId) {
         ensureTokenConfigured();
         try {
-            String responseBody = executeRequest("GET", "/preapproval/" + subscriptionId, null);
+            String responseBody = executeRequest("GET", "/subscriptions/" + subscriptionId, null);
             JsonNode root = objectMapper.readTree(responseBody);
             return new SubscriptionData(
                     root.path("id").asText(null),
                     root.path("status").asText(null),
                     firstNonBlank(root.path("init_point").asText(null), root.path("sandbox_init_point").asText(null)),
                     root.path("external_reference").asText(null),
-                    parseOffsetDateTime(root.path("next_payment_date").asText(null))
+                    parseOffsetDateTime(root.path("next_payment_date").asText(null)),
+                    null
             );
         } catch (IOException e) {
             throw new IllegalStateException("Failed to fetch Mercado Pago subscription: " + subscriptionId, e);
@@ -104,6 +98,7 @@ public class MercadoPagoBillingGateway implements BillingGateway {
             String responseBody = executeRequest("GET", "/v1/payments/" + paymentId, null);
             JsonNode root = objectMapper.readTree(responseBody);
             String subscriptionId = firstNonBlank(
+                    root.path("subscription_id").asText(null),
                     root.path("preapproval_id").asText(null),
                     root.path("metadata").path("preapproval_id").asText(null),
                     root.path("metadata").path("subscription_id").asText(null)
@@ -113,7 +108,8 @@ public class MercadoPagoBillingGateway implements BillingGateway {
                     root.path("status").asText(null),
                     subscriptionId,
                     root.path("external_reference").asText(null),
-                    parseOffsetDateTime(root.path("date_approved").asText(null))
+                    parseOffsetDateTime(root.path("date_approved").asText(null)),
+                    null
             );
         } catch (IOException e) {
             throw new IllegalStateException("Failed to fetch Mercado Pago payment: " + paymentId, e);
@@ -125,18 +121,29 @@ public class MercadoPagoBillingGateway implements BillingGateway {
         ensureTokenConfigured();
         try {
             Map<String, Object> payload = Map.of("status", "cancelled");
-            String responseBody = executeRequest("PUT", "/preapproval/" + subscriptionId, objectMapper.writeValueAsString(payload));
+            String responseBody = executeRequest("PUT", "/subscriptions/" + subscriptionId, objectMapper.writeValueAsString(payload));
             JsonNode root = objectMapper.readTree(responseBody);
             return new SubscriptionData(
                     root.path("id").asText(subscriptionId),
                     root.path("status").asText(null),
                     firstNonBlank(root.path("init_point").asText(null), root.path("sandbox_init_point").asText(null)),
                     root.path("external_reference").asText(null),
-                    parseOffsetDateTime(root.path("next_payment_date").asText(null))
+                    parseOffsetDateTime(root.path("next_payment_date").asText(null)),
+                    null
             );
         } catch (IOException e) {
             throw new IllegalStateException("Failed to cancel Mercado Pago subscription: " + subscriptionId, e);
         }
+    }
+
+    @Override
+    public String gatewayCode() {
+        return "MERCADO_PAGO";
+    }
+
+    @Override
+    public String key() {
+        return "mercadopago";
     }
 
     private String executeRequest(String method, String path, String payload) throws IOException {
@@ -173,17 +180,6 @@ public class MercadoPagoBillingGateway implements BillingGateway {
     private String baseUrl() {
         String baseUrl = mercadoPagoProperties.getApiBaseUrl();
         return (baseUrl == null || baseUrl.isBlank()) ? "https://api.mercadopago.com" : baseUrl;
-    }
-
-    private String resolvePayerEmail(User user) {
-        if (environment.acceptsProfiles(Profiles.of("local"))) {
-            return LOCAL_TEST_PAYER_EMAIL;
-        }
-        String source = user.getWhatsappId() == null ? "user" : user.getWhatsappId().replaceAll("[^0-9]", "");
-        if (source.isBlank()) {
-            source = "user";
-        }
-        return source + "@tanahora.app";
     }
 
     private OffsetDateTime parseOffsetDateTime(String value) {

@@ -17,6 +17,8 @@ public interface SubscriptionRepository extends MongoRepository<Subscription, St
 
     Optional<Subscription> findByGatewaySubscriptionId(String gatewaySubscriptionId);
 
+    Optional<Subscription> findByGatewayPaymentLinkId(String gatewayPaymentLinkId);
+
     Optional<Subscription> findTopByWhatsappIdOrderByCreatedAtDesc(String whatsappId);
 
     Optional<Subscription> findTopByWhatsappIdAndStatusInOrderByCreatedAtDesc(
