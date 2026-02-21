@@ -4,7 +4,6 @@ import com.abba.tanahora.application.dto.AiMessageProcessorDto;
 import com.abba.tanahora.application.dto.MessageReceivedType;
 import com.abba.tanahora.application.messaging.AIMessage;
 import com.abba.tanahora.application.messaging.classifier.MessageClassifier;
-import com.abba.tanahora.application.messaging.flow.FlowState;
 import com.abba.tanahora.application.notification.BasicWhatsAppMessage;
 import com.abba.tanahora.domain.model.Reminder;
 import com.abba.tanahora.domain.model.ReminderEvent;
@@ -13,6 +12,7 @@ import com.abba.tanahora.domain.service.NotificationService;
 import com.abba.tanahora.domain.service.ReminderEventService;
 import com.abba.tanahora.domain.service.ReminderService;
 import com.abba.tanahora.domain.service.UserService;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
@@ -24,7 +24,8 @@ import java.util.Optional;
 @Component
 @Slf4j
 @Order(400)
-public class ReplyReminderEventHandler implements HandleAndFlushMessageHandler {
+@RequiredArgsConstructor
+public class ReplyReminderEventHandler implements MessageHandler {
 
     private final MessageClassifier messageClassifier;
     private final ReminderEventService reminderEventService;
@@ -32,30 +33,22 @@ public class ReplyReminderEventHandler implements HandleAndFlushMessageHandler {
     private final ReminderService reminderService;
     private final UserService userService;
 
-    public ReplyReminderEventHandler(MessageClassifier messageClassifier, ReminderEventService reminderEventService, NotificationService notificationService, ReminderService reminderService, UserService userService) {
-        this.messageClassifier = messageClassifier;
-        this.reminderEventService = reminderEventService;
-        this.notificationService = notificationService;
-        this.reminderService = reminderService;
-        this.userService = userService;
-    }
-
     @Override
-    public boolean supports(AIMessage message, FlowState state) {
-        AiMessageProcessorDto dto = messageClassifier.classify(message, state);
+    public boolean supports(AIMessage message) {
+        AiMessageProcessorDto dto = messageClassifier.classify(message);
         return dto.getType() == MessageReceivedType.REMINDER_RESPONSE_TAKEN ||
                 dto.getType() == MessageReceivedType.REMINDER_RESPONSE_SNOOZED;
     }
 
     @Override
-    public void handleAndFlush(AIMessage message, FlowState state) {
+    public void handle(AIMessage message) {
         log.info("Updating reminder event status for message id={} whatsappId={}", message.getId(), message.getWhatsappId());
-        AiMessageProcessorDto dto = messageClassifier.classify(message, state);
+        AiMessageProcessorDto dto = messageClassifier.classify(message);
         if (dto.getType() == MessageReceivedType.REMINDER_RESPONSE_SNOOZED) {
-            handleSnooze(message, state);
+            handleSnooze(message);
             return;
         }
-        Optional<ReminderEvent> reminderEvent = reminderEventService.updateStatusFromResponse(message.getReplyToId(), dto.getType().name(), state.getUserId());
+        Optional<ReminderEvent> reminderEvent = reminderEventService.updateStatusFromResponse(message.getReplyToId(), dto.getType().name(), message.getWhatsappId());
         reminderEvent.ifPresent(event -> {
             Reminder reminder = event.getReminder();
             String messageToResponse = dto.getType() == MessageReceivedType.REMINDER_RESPONSE_TAKEN ?
@@ -69,14 +62,15 @@ public class ReplyReminderEventHandler implements HandleAndFlushMessageHandler {
     }
 
 
-    private void handleSnooze(AIMessage message, FlowState state) {
-        var user = userService.findByWhatsappId(state.getUserId());
+    private void handleSnooze(AIMessage message) {
+        String userId = message.getWhatsappId();
+        var user = userService.findByWhatsappId(userId);
         if (user == null) {
             return;
         }
         Optional<ReminderEvent> reminderEvent = reminderEventService.snoozeFromResponse(
                 message.getReplyToId(),
-                state.getUserId(),
+                userId,
                 Duration.ofHours(1),
                 2);
 

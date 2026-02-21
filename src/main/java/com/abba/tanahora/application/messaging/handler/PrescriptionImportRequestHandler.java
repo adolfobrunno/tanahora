@@ -1,23 +1,20 @@
 package com.abba.tanahora.application.messaging.handler;
 
 import com.abba.tanahora.application.messaging.AIMessage;
-import com.abba.tanahora.application.messaging.flow.FlowState;
 import com.abba.tanahora.domain.service.PrescriptionImportService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 @Component
 @Order(30)
-public class PrescriptionImportRequestHandler implements HandleAndFlushMessageHandler {
+@RequiredArgsConstructor
+public class PrescriptionImportRequestHandler implements MessageHandler {
 
     private final PrescriptionImportService prescriptionImportService;
 
-    public PrescriptionImportRequestHandler(PrescriptionImportService prescriptionImportService) {
-        this.prescriptionImportService = prescriptionImportService;
-    }
-
     @Override
-    public boolean supports(AIMessage message, FlowState state) {
+    public boolean supports(AIMessage message) {
         if (message == null || message.getMediaId() == null || message.getMediaId().isBlank()) {
             return false;
         }
@@ -26,7 +23,7 @@ public class PrescriptionImportRequestHandler implements HandleAndFlushMessageHa
     }
 
     @Override
-    public void handleAndFlush(AIMessage message, FlowState state) {
+    public void handle(AIMessage message) {
         prescriptionImportService.startImportFromMediaMessage(message.getId());
     }
 }

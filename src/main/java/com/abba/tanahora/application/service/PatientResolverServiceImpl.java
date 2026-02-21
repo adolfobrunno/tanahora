@@ -5,6 +5,7 @@ import com.abba.tanahora.domain.model.User;
 import com.abba.tanahora.domain.repository.UserRepository;
 import com.abba.tanahora.domain.service.PatientResolverService;
 import com.abba.tanahora.domain.utils.Constants;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -12,13 +13,10 @@ import java.util.List;
 import java.util.Optional;
 
 @Service
+@RequiredArgsConstructor
 public class PatientResolverServiceImpl implements PatientResolverService {
 
     private final UserRepository userRepository;
-
-    public PatientResolverServiceImpl(UserRepository userRepository) {
-        this.userRepository = userRepository;
-    }
 
     @Override
     public PatientRef resolve(User user, String patientName, String lastPatientId, boolean createIfMissing) {

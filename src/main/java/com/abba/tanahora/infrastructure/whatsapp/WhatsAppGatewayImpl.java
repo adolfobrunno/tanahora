@@ -12,9 +12,11 @@ import com.abba.tanahora.domain.model.User;
 import com.abba.tanahora.infrastructure.config.WhatsAppProperties;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
 import okhttp3.*;
 
 @Service
+@RequiredArgsConstructor
 public class WhatsAppGatewayImpl implements WhatsAppGateway {
 
     private static final Logger log = LoggerFactory.getLogger(WhatsAppGatewayImpl.class);
@@ -24,11 +26,6 @@ public class WhatsAppGatewayImpl implements WhatsAppGateway {
     private final WhatsAppProperties properties;
     private final ObjectMapper objectMapper;
     private final OkHttpClient httpClient = new OkHttpClient();
-
-    public WhatsAppGatewayImpl(WhatsAppProperties properties, ObjectMapper objectMapper) {
-        this.properties = properties;
-        this.objectMapper = objectMapper;
-    }
 
     @Override
     public String sendMessage(User user, WhatsAppMessage message) {

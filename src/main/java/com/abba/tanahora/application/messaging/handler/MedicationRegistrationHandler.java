@@ -5,7 +5,6 @@ import com.abba.tanahora.application.dto.MessageReceivedType;
 import com.abba.tanahora.application.exceptions.ReminderLimitException;
 import com.abba.tanahora.application.messaging.AIMessage;
 import com.abba.tanahora.application.messaging.classifier.MessageClassifier;
-import com.abba.tanahora.application.messaging.flow.FlowState;
 import com.abba.tanahora.application.notification.BasicWhatsAppMessage;
 import com.abba.tanahora.domain.exceptions.InvalidRruleException;
 import com.abba.tanahora.domain.model.Medication;
@@ -16,12 +15,14 @@ import com.abba.tanahora.domain.service.NotificationService;
 import com.abba.tanahora.domain.service.PatientResolverService;
 import com.abba.tanahora.domain.service.ReminderService;
 import com.abba.tanahora.domain.service.UserService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 @Component
 @Order(200)
-public class MedicationRegistrationHandler implements HandleAndFlushMessageHandler {
+@RequiredArgsConstructor
+public class MedicationRegistrationHandler implements MessageHandler {
 
     private final MessageClassifier messageClassifier;
     private final UserService userService;
@@ -29,27 +30,15 @@ public class MedicationRegistrationHandler implements HandleAndFlushMessageHandl
     private final NotificationService notificationService;
     private final PatientResolverService patientResolverService;
 
-    public MedicationRegistrationHandler(MessageClassifier messageClassifier,
-                                         UserService userService,
-                                         ReminderService reminderService,
-                                         NotificationService notificationService,
-                                         PatientResolverService patientResolverService) {
-        this.messageClassifier = messageClassifier;
-        this.userService = userService;
-        this.reminderService = reminderService;
-        this.notificationService = notificationService;
-        this.patientResolverService = patientResolverService;
-    }
-
     @Override
-    public boolean supports(AIMessage message, FlowState state) {
-        AiMessageProcessorDto dto = messageClassifier.classify(message, state);
+    public boolean supports(AIMessage message) {
+        AiMessageProcessorDto dto = messageClassifier.classify(message);
         return dto != null && dto.getType() == MessageReceivedType.REMINDER_CREATION;
     }
 
     @Override
-    public void handleAndFlush(AIMessage message, FlowState state) {
-        AiMessageProcessorDto dto = messageClassifier.classify(message, state);
+    public void handle(AIMessage message) {
+        AiMessageProcessorDto dto = messageClassifier.classify(message);
         if (dto == null || dto.getType() != MessageReceivedType.REMINDER_CREATION) {
             return;
         }
@@ -62,7 +51,7 @@ public class MedicationRegistrationHandler implements HandleAndFlushMessageHandl
         }
 
         User user = userService.register(message.getWhatsappId(), message.getContactName());
-        PatientRef patient = patientResolverService.resolve(user, dto.getPatientName(), state.getLastPatientId(), true);
+        PatientRef patient = patientResolverService.resolve(user, dto.getPatientName(), null, true);
         if (patient == null) {
             notificationService.sendNotification(user, BasicWhatsAppMessage.builder()
                     .to(user.getWhatsappId())
@@ -70,7 +59,6 @@ public class MedicationRegistrationHandler implements HandleAndFlushMessageHandl
                     .build());
             return;
         }
-        state.setLastPatientId(patient.getId());
         Medication medication = new Medication();
         medication.setName(dto.getMedication());
         medication.setDosage(dto.getDosage());
@@ -107,7 +95,6 @@ public class MedicationRegistrationHandler implements HandleAndFlushMessageHandl
                             """)
                     .build());
         }
-        this.flush(state);
 
     }
 

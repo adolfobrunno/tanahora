@@ -7,6 +7,7 @@ import com.abba.tanahora.domain.model.*;
 import com.abba.tanahora.domain.repository.ReminderRepository;
 import com.abba.tanahora.domain.service.NotificationService;
 import com.abba.tanahora.domain.service.ReminderService;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -18,15 +19,11 @@ import static com.abba.tanahora.domain.utils.Constants.BRAZIL_ZONEID;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class ReminderServiceImpl implements ReminderService {
 
     private final ReminderRepository reminderRepository;
     private final NotificationService notificationService;
-
-    public ReminderServiceImpl(ReminderRepository reminderRepository, NotificationService notificationService) {
-        this.reminderRepository = reminderRepository;
-        this.notificationService = notificationService;
-    }
 
     @Override
     public Reminder scheduleMedication(User user, PatientRef patient, Medication med, String rrule) {

@@ -1,32 +1,29 @@
 package com.abba.tanahora.application.messaging.handler;
 
 import com.abba.tanahora.application.messaging.AIMessage;
-import com.abba.tanahora.application.messaging.flow.FlowState;
 import com.abba.tanahora.domain.service.PrescriptionImportService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 @Component
 @Order(40)
-public class PrescriptionImportConfirmationHandler implements HandleAndFlushMessageHandler {
+@RequiredArgsConstructor
+public class PrescriptionImportConfirmationHandler implements MessageHandler {
 
     private static final String CONFIRM_PREFIX = "confirm_prescription:";
     private static final String CANCEL_PREFIX = "cancel_prescription:";
 
     private final PrescriptionImportService prescriptionImportService;
 
-    public PrescriptionImportConfirmationHandler(PrescriptionImportService prescriptionImportService) {
-        this.prescriptionImportService = prescriptionImportService;
-    }
-
     @Override
-    public boolean supports(AIMessage message, FlowState state) {
+    public boolean supports(AIMessage message) {
         String action = resolveAction(message);
         return action.startsWith(CONFIRM_PREFIX) || action.startsWith(CANCEL_PREFIX);
     }
 
     @Override
-    public void handleAndFlush(AIMessage message, FlowState state) {
+    public void handle(AIMessage message) {
         String action = resolveAction(message);
         if (action.startsWith(CONFIRM_PREFIX)) {
             String importId = action.substring(CONFIRM_PREFIX.length()).trim();

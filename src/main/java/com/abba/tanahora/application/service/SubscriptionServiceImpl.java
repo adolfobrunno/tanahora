@@ -13,6 +13,7 @@ import com.abba.tanahora.domain.service.NotificationService;
 import com.abba.tanahora.domain.service.SubscriptionService;
 import com.abba.tanahora.domain.service.UserService;
 import com.abba.tanahora.infrastructure.config.BillingProperties;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -22,6 +23,7 @@ import java.util.Optional;
 
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class SubscriptionServiceImpl implements SubscriptionService {
 
     private static final List<SubscriptionStatus> REUSABLE_PENDING_STATUSES = List.of(SubscriptionStatus.PENDING);
@@ -39,22 +41,6 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     private final BillingGateway billingGateway;
     private final BillingProperties billingProperties;
     private final NotificationService notificationService;
-
-    public SubscriptionServiceImpl(SubscriptionRepository subscriptionRepository,
-                                   PaymentEventRepository paymentEventRepository,
-                                   UserRepository userRepository,
-                                   UserService userService,
-                                   BillingGateway billingGateway,
-                                   BillingProperties billingProperties,
-                                   NotificationService notificationService) {
-        this.subscriptionRepository = subscriptionRepository;
-        this.paymentEventRepository = paymentEventRepository;
-        this.userRepository = userRepository;
-        this.userService = userService;
-        this.billingGateway = billingGateway;
-        this.billingProperties = billingProperties;
-        this.notificationService = notificationService;
-    }
 
     @Override
     public UpgradeCheckoutResult createOrReuseUpgradeLink(String whatsappId, String contactName) {

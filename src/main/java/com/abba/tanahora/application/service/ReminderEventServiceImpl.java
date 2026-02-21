@@ -8,6 +8,7 @@ import com.abba.tanahora.domain.model.User;
 import com.abba.tanahora.domain.repository.ReminderEventRepository;
 import com.abba.tanahora.domain.service.ReminderEventService;
 import com.abba.tanahora.domain.service.UserService;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -17,15 +18,11 @@ import java.util.Optional;
 
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class ReminderEventServiceImpl implements ReminderEventService {
 
     private final ReminderEventRepository reminderEventRepository;
     private final UserService userService;
-
-    public ReminderEventServiceImpl(ReminderEventRepository reminderEventRepository, UserService userService) {
-        this.reminderEventRepository = reminderEventRepository;
-        this.userService = userService;
-    }
 
     @Override
     public void registerDispatch(Reminder reminder, String whatsappMessageId) {

@@ -3,6 +3,7 @@ package com.abba.tanahora.infrastructure.scheduler;
 import com.abba.tanahora.domain.model.MessageReceived;
 import com.abba.tanahora.domain.service.MessageReceivedHandler;
 import com.abba.tanahora.domain.service.MessageReceivedService;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -13,18 +14,13 @@ import java.util.List;
 
 @Component
 @ConditionalOnProperty(prefix = "tictacmed.scheduler", name = "enabled", havingValue = "true", matchIfMissing = true)
+@RequiredArgsConstructor
 public class MessageReceivedJob {
 
     private static final Logger log = LoggerFactory.getLogger(MessageReceivedJob.class);
 
     private final MessageReceivedService messageReceivedService;
     private final MessageReceivedHandler messageReceivedHandler;
-
-    public MessageReceivedJob(MessageReceivedService messageReceivedService,
-                              MessageReceivedHandler messageReceivedHandler) {
-        this.messageReceivedService = messageReceivedService;
-        this.messageReceivedHandler = messageReceivedHandler;
-    }
 
     @Scheduled(fixedDelayString = "${tanahora.scheduler.fixed-delay-ms:60000}")
     public void processPendingMessages() {

@@ -4,6 +4,7 @@ import com.abba.tanahora.domain.service.SubscriptionService;
 import com.abba.tanahora.infrastructure.config.AsaasProperties;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
@@ -17,6 +18,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/webhooks/asaas")
+@RequiredArgsConstructor
 public class AsaasWebhookController {
 
     private static final Logger log = LoggerFactory.getLogger(AsaasWebhookController.class);
@@ -24,14 +26,6 @@ public class AsaasWebhookController {
     private final SubscriptionService subscriptionService;
     private final ObjectMapper objectMapper;
     private final AsaasProperties asaasProperties;
-
-    public AsaasWebhookController(SubscriptionService subscriptionService,
-                                  ObjectMapper objectMapper,
-                                  AsaasProperties asaasProperties) {
-        this.subscriptionService = subscriptionService;
-        this.objectMapper = objectMapper;
-        this.asaasProperties = asaasProperties;
-    }
 
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Void> receive(@RequestHeader Map<String, String> headers,

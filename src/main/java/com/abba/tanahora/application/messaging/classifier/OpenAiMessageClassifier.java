@@ -2,8 +2,8 @@ package com.abba.tanahora.application.messaging.classifier;
 
 import com.abba.tanahora.application.dto.AiMessageProcessorDto;
 import com.abba.tanahora.application.messaging.AIMessage;
-import com.abba.tanahora.application.messaging.flow.FlowState;
 import com.abba.tanahora.application.service.OpenAiApiService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
@@ -16,32 +16,24 @@ import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Component
+@RequiredArgsConstructor
 public class OpenAiMessageClassifier implements MessageClassifier {
-
-    private static final String CLASSIFICATION_KEY = "classification";
 
     private final OpenAiApiService openAiApiService;
     private final Map<String, AiMessageProcessorDto> classificationCache = new ConcurrentHashMap<>();
 
-    public OpenAiMessageClassifier(OpenAiApiService openAiApiService) {
-        this.openAiApiService = openAiApiService;
-    }
-
     @Override
-    public AiMessageProcessorDto classify(AIMessage message, FlowState state) {
+    public AiMessageProcessorDto classify(AIMessage message) {
         String messageHash = this.messageHash(message.getBody());
         AiMessageProcessorDto cachedByHash = classificationCache.get(messageHash);
         if (cachedByHash != null) {
-            state.getContext().put(CLASSIFICATION_KEY, cachedByHash);
             return cachedByHash;
         }
 
         AiMessageProcessorDto dto = this.iaClassify(message);
         if (dto != null) {
             AiMessageProcessorDto existing = classificationCache.putIfAbsent(messageHash, dto);
-            AiMessageProcessorDto valueToUse = existing != null ? existing : dto;
-            state.getContext().put(CLASSIFICATION_KEY, valueToUse);
-            return valueToUse;
+            return existing != null ? existing : dto;
         }
         return null;
     }

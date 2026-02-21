@@ -3,6 +3,7 @@ package com.abba.tanahora.infrastructure.payment;
 import com.abba.tanahora.domain.service.SubscriptionService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
@@ -16,17 +17,13 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/webhooks/mercadopago")
+@RequiredArgsConstructor
 public class MercadoPagoWebhookController {
 
     private static final Logger log = LoggerFactory.getLogger(MercadoPagoWebhookController.class);
 
     private final SubscriptionService subscriptionService;
     private final ObjectMapper objectMapper;
-
-    public MercadoPagoWebhookController(SubscriptionService subscriptionService, ObjectMapper objectMapper) {
-        this.subscriptionService = subscriptionService;
-        this.objectMapper = objectMapper;
-    }
 
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Void> receive(@RequestHeader Map<String, String> headers,

@@ -5,6 +5,7 @@ import com.abba.tanahora.domain.service.MessageReceivedService;
 import com.abba.tanahora.infrastructure.config.WhatsAppProperties;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -16,6 +17,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/webhooks/whatsapp")
+@RequiredArgsConstructor
 public class WhatsAppWebhookController {
 
     private static final Logger log = LoggerFactory.getLogger(WhatsAppWebhookController.class);
@@ -23,14 +25,6 @@ public class WhatsAppWebhookController {
     private final WhatsAppProperties props;
     private final MessageReceivedService messageReceivedService;
     private final ObjectMapper objectMapper;
-
-    public WhatsAppWebhookController(WhatsAppProperties props,
-                                     MessageReceivedService messageReceivedService,
-                                     ObjectMapper objectMapper) {
-        this.props = props;
-        this.messageReceivedService = messageReceivedService;
-        this.objectMapper = objectMapper;
-    }
 
     @GetMapping
     public ResponseEntity<String> verify(@RequestParam(name = "hub.mode", required = false) String mode,

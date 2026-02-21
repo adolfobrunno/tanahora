@@ -6,6 +6,7 @@ import com.abba.tanahora.infrastructure.config.BillingProperties;
 import com.abba.tanahora.infrastructure.config.MercadoPagoProperties;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
 import okhttp3.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,6 +20,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 @Service
+@RequiredArgsConstructor
 public class MercadoPagoBillingGateway implements SelectableBillingGateway {
 
     private static final Logger log = LoggerFactory.getLogger(MercadoPagoBillingGateway.class);
@@ -27,14 +29,6 @@ public class MercadoPagoBillingGateway implements SelectableBillingGateway {
     private final BillingProperties billingProperties;
     private final ObjectMapper objectMapper;
     private final OkHttpClient httpClient = new OkHttpClient();
-
-    public MercadoPagoBillingGateway(MercadoPagoProperties mercadoPagoProperties,
-                                     BillingProperties billingProperties,
-                                     ObjectMapper objectMapper) {
-        this.mercadoPagoProperties = mercadoPagoProperties;
-        this.billingProperties = billingProperties;
-        this.objectMapper = objectMapper;
-    }
 
     @Override
     public SubscriptionData createRecurringSubscription(User user,

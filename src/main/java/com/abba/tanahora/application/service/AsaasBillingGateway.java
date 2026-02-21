@@ -6,6 +6,7 @@ import com.abba.tanahora.infrastructure.config.AsaasProperties;
 import com.asaas.apisdk.AsaasSdk;
 import com.asaas.apisdk.exceptions.ApiError;
 import com.asaas.apisdk.models.*;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -21,16 +22,13 @@ import java.time.format.DateTimeParseException;
 import java.util.Locale;
 
 @Service
+@RequiredArgsConstructor
 public class AsaasBillingGateway implements SelectableBillingGateway {
 
     private static final Logger log = LoggerFactory.getLogger(AsaasBillingGateway.class);
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE;
 
     private final AsaasProperties asaasProperties;
-
-    public AsaasBillingGateway(AsaasProperties asaasProperties) {
-        this.asaasProperties = asaasProperties;
-    }
 
     @Override
     public String gatewayCode() {

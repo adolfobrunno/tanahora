@@ -4,7 +4,6 @@ import com.abba.tanahora.application.dto.AiMessageProcessorDto;
 import com.abba.tanahora.application.dto.MessageReceivedType;
 import com.abba.tanahora.application.messaging.AIMessage;
 import com.abba.tanahora.application.messaging.classifier.MessageClassifier;
-import com.abba.tanahora.application.messaging.flow.FlowState;
 import com.abba.tanahora.application.notification.BasicWhatsAppMessage;
 import com.abba.tanahora.domain.model.Reminder;
 import com.abba.tanahora.domain.model.User;
@@ -12,6 +11,7 @@ import com.abba.tanahora.domain.service.NotificationService;
 import com.abba.tanahora.domain.service.PatientResolverService;
 import com.abba.tanahora.domain.service.ReminderService;
 import com.abba.tanahora.domain.service.UserService;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
@@ -21,7 +21,8 @@ import java.util.Optional;
 @Component
 @Slf4j
 @Order(500)
-public class CancelMedicationHandler implements HandleAndFlushMessageHandler {
+@RequiredArgsConstructor
+public class CancelMedicationHandler implements MessageHandler {
 
     private final MessageClassifier messageClassifier;
     private final UserService userService;
@@ -29,35 +30,25 @@ public class CancelMedicationHandler implements HandleAndFlushMessageHandler {
     private final NotificationService notificationService;
     private final PatientResolverService patientResolverService;
 
-    public CancelMedicationHandler(MessageClassifier messageClassifier, UserService userService, ReminderService reminderService, NotificationService notificationService, PatientResolverService patientResolverService) {
-        this.messageClassifier = messageClassifier;
-        this.userService = userService;
-        this.reminderService = reminderService;
-        this.notificationService = notificationService;
-        this.patientResolverService = patientResolverService;
-    }
-
     @Override
-    public boolean supports(AIMessage message, FlowState state) {
-        AiMessageProcessorDto dto = messageClassifier.classify(message, state);
-
+    public boolean supports(AIMessage message) {
+        AiMessageProcessorDto dto = messageClassifier.classify(message);
         return dto.getType() == MessageReceivedType.REMINDER_CANCEL;
     }
 
     @Override
-    public void handleAndFlush(AIMessage message, FlowState state) {
+    public void handle(AIMessage message) {
 
-        AiMessageProcessorDto dto = messageClassifier.classify(message, state);
+        AiMessageProcessorDto dto = messageClassifier.classify(message);
 
-        String userId = state.getUserId();
+        String userId = message.getWhatsappId();
         User user = userService.findByWhatsappId(userId);
-        var patient = patientResolverService.resolve(user, dto.getPatientName(), state.getLastPatientId(), false);
+        var patient = patientResolverService.resolve(user, dto.getPatientName(), null, false);
         if (patient == null) {
             notificationService.sendNotification(user,
                     BasicWhatsAppMessage.builder().to(user.getWhatsappId()).message("Nao identifiquei o paciente. Informe o nome para cancelar.").build());
             return;
         }
-        state.setLastPatientId(patient.getId());
 
         Optional<Reminder> reminderMatch = reminderService.getByUser(user)
                 .stream()

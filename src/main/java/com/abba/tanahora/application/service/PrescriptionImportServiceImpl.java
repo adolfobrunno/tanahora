@@ -12,6 +12,7 @@ import com.abba.tanahora.infrastructure.whatsapp.WhatsAppMediaClient;
 import com.whatsapp.api.domain.messages.Button;
 import com.whatsapp.api.domain.messages.Reply;
 import com.whatsapp.api.domain.messages.type.ButtonType;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -28,6 +29,7 @@ import java.util.stream.Collectors;
 
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class PrescriptionImportServiceImpl implements PrescriptionImportService {
 
     private static final String CONFIRM_PREFIX = "confirm_prescription:";
@@ -42,24 +44,6 @@ public class PrescriptionImportServiceImpl implements PrescriptionImportService 
     private final PatientResolverService patientResolverService;
     private final OpenAiApiService openAiApiService;
     private final WhatsAppMediaClient whatsAppMediaClient;
-
-    public PrescriptionImportServiceImpl(MessageReceivedRepository messageReceivedRepository,
-                                         PrescriptionImportRepository prescriptionImportRepository,
-                                         UserService userService,
-                                         NotificationService notificationService,
-                                         ReminderService reminderService,
-                                         PatientResolverService patientResolverService,
-                                         OpenAiApiService openAiApiService,
-                                         WhatsAppMediaClient whatsAppMediaClient) {
-        this.messageReceivedRepository = messageReceivedRepository;
-        this.prescriptionImportRepository = prescriptionImportRepository;
-        this.userService = userService;
-        this.notificationService = notificationService;
-        this.reminderService = reminderService;
-        this.patientResolverService = patientResolverService;
-        this.openAiApiService = openAiApiService;
-        this.whatsAppMediaClient = whatsAppMediaClient;
-    }
 
     @Override
     public void startImportFromMediaMessage(String messageId) {

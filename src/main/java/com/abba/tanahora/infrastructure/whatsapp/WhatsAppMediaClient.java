@@ -3,6 +3,7 @@ package com.abba.tanahora.infrastructure.whatsapp;
 import com.abba.tanahora.infrastructure.config.WhatsAppProperties;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Component;
 import java.io.IOException;
 
 @Component
+@RequiredArgsConstructor
 public class WhatsAppMediaClient {
 
     private static final Logger log = LoggerFactory.getLogger(WhatsAppMediaClient.class);
@@ -21,11 +23,6 @@ public class WhatsAppMediaClient {
     private final WhatsAppProperties properties;
     private final ObjectMapper objectMapper;
     private final OkHttpClient client = new OkHttpClient();
-
-    public WhatsAppMediaClient(WhatsAppProperties properties, ObjectMapper objectMapper) {
-        this.properties = properties;
-        this.objectMapper = objectMapper;
-    }
 
     public MediaPayload downloadByMediaId(String mediaId) {
         if (mediaId == null || mediaId.isBlank()) {

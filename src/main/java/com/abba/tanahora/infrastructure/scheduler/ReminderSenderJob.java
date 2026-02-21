@@ -10,6 +10,7 @@ import com.abba.tanahora.domain.service.ReminderService;
 import com.whatsapp.api.domain.messages.Button;
 import com.whatsapp.api.domain.messages.Reply;
 import com.whatsapp.api.domain.messages.type.ButtonType;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -22,18 +23,12 @@ import java.util.Optional;
 @Component
 @Slf4j
 @ConditionalOnProperty(prefix = "tictacmed.scheduler", name = "enabled", havingValue = "true", matchIfMissing = true)
+@RequiredArgsConstructor
 public class ReminderSenderJob {
 
     private final ReminderService reminderService;
     private final ReminderEventService reminderEventService;
     private final NotificationService notificationService;
-
-
-    public ReminderSenderJob(ReminderService reminderService, ReminderEventService reminderEventService, NotificationService notificationService) {
-        this.reminderService = reminderService;
-        this.reminderEventService = reminderEventService;
-        this.notificationService = notificationService;
-    }
 
 
     @Scheduled(fixedDelayString = "${tanahora.scheduler.send-reminders-delay-ms}")

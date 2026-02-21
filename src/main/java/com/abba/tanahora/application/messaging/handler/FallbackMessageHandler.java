@@ -1,7 +1,6 @@
 package com.abba.tanahora.application.messaging.handler;
 
 import com.abba.tanahora.application.messaging.AIMessage;
-import com.abba.tanahora.application.messaging.flow.FlowState;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
@@ -12,12 +11,12 @@ import org.springframework.stereotype.Component;
 public class FallbackMessageHandler implements MessageHandler {
 
     @Override
-    public boolean supports(AIMessage message, FlowState state) {
+    public boolean supports(AIMessage message) {
         return true;
     }
 
     @Override
-    public void handle(AIMessage message, FlowState state) {
+    public void handle(AIMessage message) {
         log.info("No handler matched message id={} whatsappId={}", message.getId(), message.getWhatsappId());
     }
 }

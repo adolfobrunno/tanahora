@@ -4,36 +4,31 @@ import com.abba.tanahora.application.dto.AiMessageProcessorDto;
 import com.abba.tanahora.application.dto.MessageReceivedType;
 import com.abba.tanahora.application.messaging.AIMessage;
 import com.abba.tanahora.application.messaging.classifier.MessageClassifier;
-import com.abba.tanahora.application.messaging.flow.FlowState;
 import com.abba.tanahora.application.notification.BasicWhatsAppMessage;
 import com.abba.tanahora.domain.model.User;
 import com.abba.tanahora.domain.service.NotificationService;
 import com.abba.tanahora.domain.service.UserService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 @Component
 @Order(100)
-public class WelcomeMessageHandler implements HandleAndFlushMessageHandler {
+@RequiredArgsConstructor
+public class WelcomeMessageHandler implements MessageHandler {
 
     private final MessageClassifier messageClassifier;
     private final NotificationService notificationService;
     private final UserService userService;
 
-    public WelcomeMessageHandler(MessageClassifier messageClassifier, NotificationService notificationService, UserService userService) {
-        this.messageClassifier = messageClassifier;
-        this.notificationService = notificationService;
-        this.userService = userService;
-    }
-
     @Override
-    public boolean supports(AIMessage message, FlowState state) {
-        AiMessageProcessorDto dto = messageClassifier.classify(message, state);
+    public boolean supports(AIMessage message) {
+        AiMessageProcessorDto dto = messageClassifier.classify(message);
         return dto.getType() == MessageReceivedType.WELCOME;
     }
 
     @Override
-    public void handleAndFlush(AIMessage message, FlowState state) {
+    public void handle(AIMessage message) {
 
         User user = userService.register(message.getWhatsappId(), message.getContactName());
 

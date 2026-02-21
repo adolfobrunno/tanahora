@@ -4,16 +4,14 @@ import com.abba.tanahora.domain.model.Plan;
 import com.abba.tanahora.domain.model.User;
 import com.abba.tanahora.domain.repository.UserRepository;
 import com.abba.tanahora.domain.service.UserService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 @Service
+@RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
-
-    public UserServiceImpl(UserRepository userRepository) {
-        this.userRepository = userRepository;
-    }
 
     @Override
     public User register(String whatsappId, String nome) {

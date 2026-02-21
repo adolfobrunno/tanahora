@@ -4,6 +4,8 @@ import com.abba.tanahora.domain.model.User;
 import com.abba.tanahora.domain.service.BillingGateway;
 import com.abba.tanahora.domain.service.SelectableBillingGateway;
 import com.abba.tanahora.infrastructure.config.BillingProperties;
+import jakarta.annotation.PostConstruct;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
 
@@ -17,15 +19,18 @@ import java.util.stream.Collectors;
 
 @Service
 @Primary
+@RequiredArgsConstructor
 public class RoutingBillingGateway implements BillingGateway {
 
-    private final Map<String, SelectableBillingGateway> gatewaysByKey;
+    private final List<SelectableBillingGateway> gateways;
     private final BillingProperties billingProperties;
 
-    public RoutingBillingGateway(List<SelectableBillingGateway> gateways, BillingProperties billingProperties) {
+    private Map<String, SelectableBillingGateway> gatewaysByKey;
+
+    @PostConstruct
+    void init() {
         this.gatewaysByKey = gateways.stream()
                 .collect(Collectors.toMap(gateway -> normalize(gateway.key()), Function.identity()));
-        this.billingProperties = billingProperties;
     }
 
     @Override
