@@ -8,10 +8,12 @@ import com.abba.tanahora.application.notification.BasicWhatsAppMessage;
 import com.abba.tanahora.domain.model.Reminder;
 import com.abba.tanahora.domain.model.ReminderEvent;
 import com.abba.tanahora.domain.model.ReminderEventStatus;
+import com.abba.tanahora.domain.model.User;
 import com.abba.tanahora.domain.service.NotificationService;
 import com.abba.tanahora.domain.service.ReminderEventService;
 import com.abba.tanahora.domain.service.ReminderService;
 import com.abba.tanahora.domain.service.UserService;
+import com.abba.tanahora.domain.utils.Constants;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.annotation.Order;
@@ -48,13 +50,18 @@ public class ReplyReminderEventHandler implements MessageHandler {
             handleSnooze(message);
             return;
         }
+        User user = userService.findByWhatsappId(message.getWhatsappId());
+        if(dto.getPatientName().equals(Constants.NOT_INFORMED)) {
+            dto.setPatientName(user.getName());
+        }
+
         Optional<ReminderEvent> reminderEvent = reminderEventService.updateStatusFromResponse(message.getReplyToId(), dto.getType().name(), message.getWhatsappId());
         reminderEvent.ifPresent(event -> {
             Reminder reminder = event.getReminder();
             String messageToResponse = dto.getType() == MessageReceivedType.REMINDER_RESPONSE_TAKEN ?
                     reminder.createTakenConfirmationMessage() : reminder.createSkippedConfirmationMessage();
-            notificationService.sendNotification(reminder.getUser(), BasicWhatsAppMessage.builder()
-                    .to(reminder.getUser().getWhatsappId())
+            notificationService.sendNotification(user, BasicWhatsAppMessage.builder()
+                    .to(user.getWhatsappId())
                     .message(messageToResponse)
                     .build());
             reminderService.updateReminderNextDispatch(reminder);

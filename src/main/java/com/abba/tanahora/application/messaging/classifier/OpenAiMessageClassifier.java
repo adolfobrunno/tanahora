@@ -60,22 +60,23 @@ public class OpenAiMessageClassifier implements MessageClassifier {
                 
                 Retorne seguindo o padrao indicado.
                 Para o campo 'dosage', informe a quantidade do medicamento a ser tomada,
-                se nao houver essa informacao na mensagem, retorne 'nao informado'.
+                se não houver essa informacao na mensagem, retorne 'não informado'.
                 Para o campo 'patientName', informe o nome do paciente quando houver
-                (ex: "para Maria"), caso contrario retorne 'nao informado'.
+                (ex: "para Maria"), caso contrario retorne 'não informado'.
                 
                 O type do retorno deve ser inferido de acordo com a mensagem recebida.
                 Por exemplo:
                  - se a mensagem for uma saudacao, o type deve ser WELCOME
                  - se a mensagem for um lembrete de medicamento, o type deve ser REMINDER_CREATION
                  - se a mensagem for uma resposta positiva de um lembrete de medicamento (tomei, ok, tudo certo, etc), o type deve ser REMINDER_RESPONSE_TAKEN
-                 - se a mensagem for uma resposta negativa de um lembrete de medicamento (nao tomei, nao vou tomar, esqueci, etc), o type deve ser REMINDER_RESPONSE_SKIPPED
+                 - se a mensagem for uma resposta negativa de um lembrete de medicamento (não tomei, não vou tomar, esqueci, etc), o type deve ser REMINDER_RESPONSE_SKIPPED
                  - se a mensagem for um adiamento de lembrete (adiar, depois, mais tarde, etc), o type deve ser REMINDER_RESPONSE_SNOOZED
                  - se a mensagem for um cancelamento de um lembrete de medicamento, o type deve ser REMINDER_CANCEL
                  - se a mensagem for uma pergunta sobre quando e o proximo lembrete, o type deve ser CHECK_NEXT_DISPATCH
                  - se a mensagem for uma mensagem de suporte, o type deve ser SUPPORT
                  - se a mensagem for solicitando upgrade ou downgrade do plano, o type deve ser PLAN_UPGRADE ou PLAN_DOWNGRADE
                  - se a mensagem for para consultar o status/informacoes do plano, o type deve ser PLAN_INFO
+                 - se a mensagem for um pedido para checar o histórico de lembretes, o type deve ser CHECK_HISTORY
                 
                 A RRULE deve seguir o padrao iCalendar. Exemplo: FREQ=DAILY;INTERVAL=1;UNTIL=20260213T000000Z
                 Regras obrigatorias para RRULE valida:
@@ -83,10 +84,10 @@ public class OpenAiMessageClassifier implements MessageClassifier {
                 - BYHOUR aceita apenas valores de 0 a 23 (nunca use 24)
                 - BYMINUTE aceita apenas 0 a 59
                 - BYSECOND aceita apenas 0 a 59
-                - Se usar FREQ=HOURLY;INTERVAL=N, nao use BYHOUR, BYMINUTE ou BYSECOND na mesma regra
+                - Se usar FREQ=HOURLY;INTERVAL=N, não use BYHOUR, BYMINUTE ou BYSECOND na mesma regra
                 - Se for "a cada 8 horas", use FREQ=HOURLY;INTERVAL=8 (sem BYHOUR/BYMINUTE/BYSECOND)
                 - Se for "a cada 12 horas", use FREQ=HOURLY;INTERVAL=12 (sem BYHOUR/BYMINUTE/BYSECOND)
-                - Se quiser horarios fixos no dia (ex: 00:00, 08:00, 16:00), use FREQ=DAILY com BYHOUR/BYMINUTE/BYSECOND e nao use FREQ=HOURLY
+                - Se quiser horarios fixos no dia (ex: 00:00, 08:00, 16:00), use FREQ=DAILY com BYHOUR/BYMINUTE/BYSECOND e não use FREQ=HOURLY
                 - Se usar UNTIL, use formato UTC basico: yyyyMMdd'T'HHmmss'Z'
                 Exemplos seguros:
                 - FREQ=HOURLY;INTERVAL=8;UNTIL=20260221T235959Z

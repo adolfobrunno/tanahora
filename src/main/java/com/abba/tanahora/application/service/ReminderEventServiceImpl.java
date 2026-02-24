@@ -4,8 +4,10 @@ import com.abba.tanahora.application.dto.MessageReceivedType;
 import com.abba.tanahora.domain.model.Reminder;
 import com.abba.tanahora.domain.model.ReminderEvent;
 import com.abba.tanahora.domain.model.ReminderEventStatus;
+import com.abba.tanahora.domain.model.ReminderTakenHistory;
 import com.abba.tanahora.domain.model.User;
 import com.abba.tanahora.domain.repository.ReminderEventRepository;
+import com.abba.tanahora.domain.repository.ReminderTakenHistoryRepository;
 import com.abba.tanahora.domain.service.ReminderEventService;
 import com.abba.tanahora.domain.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -14,7 +16,14 @@ import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.time.OffsetDateTime;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -22,6 +31,7 @@ import java.util.Optional;
 public class ReminderEventServiceImpl implements ReminderEventService {
 
     private final ReminderEventRepository reminderEventRepository;
+    private final ReminderTakenHistoryRepository reminderTakenHistoryRepository;
     private final UserService userService;
 
     @Override
@@ -76,6 +86,9 @@ public class ReminderEventServiceImpl implements ReminderEventService {
             e.setStatus(reminderEventStatus);
             e.setResponseReceivedAt(OffsetDateTime.now());
             reminderEventRepository.save(e);
+            if (reminderEventStatus == ReminderEventStatus.TAKEN) {
+                reminderTakenHistoryRepository.save(buildTakenHistory(e, user));
+            }
         });
 
 
@@ -111,6 +124,118 @@ public class ReminderEventServiceImpl implements ReminderEventService {
         return Optional.of(reminderEvent);
     }
 
+    @Override
+    public Map<String, List<ReminderEvent>> findTakenByUserIdGroupedByPatient(String userId) {
+        User user = userService.findByWhatsappId(userId);
+        if (user == null) {
+            return Map.of();
+        }
+
+        List<ReminderTakenHistory> histories = reminderTakenHistoryRepository.findAllByUserId(user.getId());
+        if (histories.isEmpty()) {
+            return Map.of();
+        }
+
+        Map<UUID, ReminderTakenHistory> latestHistoryByEventId = latestHistoryByEventId(histories);
+        List<ReminderEvent> events = loadEventsByHistory(latestHistoryByEventId);
+        if (events.isEmpty()) {
+            return Map.of();
+        }
+
+        boolean hasPatientHistory = latestHistoryByEventId.values().stream()
+                .anyMatch(history -> history.getPatientName() != null && !history.getPatientName().isBlank());
+        boolean useUserLabel = (user.getPatients() == null || user.getPatients().isEmpty()) && !hasPatientHistory;
+        String fallbackUserName = user.getName() == null || user.getName().isBlank() ? "usuario" : user.getName();
+
+        Map<UUID, String> patientNameByEventId = patientNameByEventId(latestHistoryByEventId);
+
+        return events.stream()
+                .sorted(this::compareSentAt)
+                .collect(Collectors.groupingBy(
+                        event -> resolvePatientLabel(event, useUserLabel, fallbackUserName, patientNameByEventId),
+                        LinkedHashMap::new,
+                        Collectors.toCollection(ArrayList::new)));
+    }
+
+    private Map<UUID, ReminderTakenHistory> latestHistoryByEventId(List<ReminderTakenHistory> histories) {
+        Map<UUID, ReminderTakenHistory> latestHistoryByEventId = new LinkedHashMap<>();
+        for (ReminderTakenHistory history : histories) {
+            if (history.getEventId() == null) {
+                continue;
+            }
+            UUID eventId = history.getEventId();
+            ReminderTakenHistory existing = latestHistoryByEventId.get(eventId);
+            if (existing == null) {
+                latestHistoryByEventId.put(eventId, history);
+                continue;
+            }
+            OffsetDateTime existingTakenAt = existing.getTakenAt();
+            OffsetDateTime candidateTakenAt = history.getTakenAt();
+            if (existingTakenAt == null || (candidateTakenAt != null && candidateTakenAt.isAfter(existingTakenAt))) {
+                latestHistoryByEventId.put(eventId, history);
+            }
+        }
+        return latestHistoryByEventId;
+    }
+
+    private List<ReminderEvent> loadEventsByHistory(Map<UUID, ReminderTakenHistory> latestHistoryByEventId) {
+        if (latestHistoryByEventId.isEmpty()) {
+            return List.of();
+        }
+        return reminderEventRepository.findAllById(latestHistoryByEventId.keySet().stream().toList());
+    }
+
+    private Map<UUID, String> patientNameByEventId(Map<UUID, ReminderTakenHistory> latestHistoryByEventId) {
+        return latestHistoryByEventId.values().stream()
+                .filter(history -> history.getPatientName() != null && !history.getPatientName().isBlank())
+                .collect(Collectors.toMap(
+                        ReminderTakenHistory::getEventId,
+                        ReminderTakenHistory::getPatientName,
+                        (left, right) -> left,
+                        LinkedHashMap::new));
+    }
+
+    private int compareSentAt(ReminderEvent left, ReminderEvent right) {
+        OffsetDateTime leftSentAt = left.getSentAt();
+        OffsetDateTime rightSentAt = right.getSentAt();
+        if (leftSentAt == null && rightSentAt == null) {
+            return 0;
+        }
+        if (leftSentAt == null) {
+            return 1;
+        }
+        if (rightSentAt == null) {
+            return -1;
+        }
+        return leftSentAt.compareTo(rightSentAt);
+    }
+
+    private String resolvePatientLabel(ReminderEvent event,
+                                       boolean useUserLabel,
+                                       String fallbackUserName,
+                                       Map<UUID, String> patientNameByEventId) {
+        if (useUserLabel) {
+            return fallbackUserName;
+        }
+        String patientName = event.getPatientName();
+        if (patientName == null || patientName.isBlank()) {
+            String historyPatientName = patientNameByEventId.get(event.getId());
+            return historyPatientName == null || historyPatientName.isBlank() ? fallbackUserName : historyPatientName;
+        }
+        return patientName;
+    }
+
+    private ReminderTakenHistory buildTakenHistory(ReminderEvent event, User user) {
+        ReminderTakenHistory history = new ReminderTakenHistory();
+        history.setUserId(user.getId());
+        history.setPatientName(event.getPatientName() == null ? user.getName() : event.getPatientName());
+        history.setEventId(event.getId());
+        history.setTakenAt(event.getResponseReceivedAt() == null ? OffsetDateTime.now() : event.getResponseReceivedAt());
+        if (event.getReminder() != null && event.getReminder().getMedication() != null) {
+            history.setMedicationName(event.getReminder().getMedication().getName());
+        }
+        return history;
+    }
     private ReminderEventStatus resolveStatus(String responseText) {
 
         MessageReceivedType messageReceivedType = MessageReceivedType.valueOf(responseText);

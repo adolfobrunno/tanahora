@@ -11,6 +11,7 @@ public enum MessageReceivedType {
     PLAN_DOWNGRADE,
     PLAN_INFO,
     SUPPORT,
-    CHECK_NEXT_DISPATCH
+    CHECK_NEXT_DISPATCH,
+    CHECK_HISTORY
 
 }
