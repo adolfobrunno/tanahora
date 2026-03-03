@@ -63,3 +63,24 @@ O endpoint de webhook está em `POST /webhooks/whatsapp`.
 ## Licença
 
 Defina a licença conforme a necessidade do projeto.
+
+## Deploy na AWS com GitHub Actions
+
+O projeto foi configurado para deploy automatico no ECS/Fargate com publicacao da imagem no ECR.
+
+Arquivos de deploy:
+
+- `.github/workflows/deploy-aws.yml`
+- `deploy/ecs-task-definition.json.tpl`
+- `.env.aws.example`
+
+Configuracao no GitHub:
+
+1. Copie `.env.aws.example` para um `.env` local e preencha com os dados da sua conta AWS.
+2. No repositorio, acesse `Settings > Secrets and variables > Actions`.
+3. Crie o secret `AWS_DOTENV` contendo o conteudo completo desse `.env`.
+
+Disparo do deploy:
+
+- Automatico a cada push na branch `main`.
+- Manual pela aba `Actions`, workflow `Deploy AWS ECS`, botao `Run workflow`.

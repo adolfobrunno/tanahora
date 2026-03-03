@@ -1,0 +1,123 @@
+name: Deploy AWS ECS
+
+on:
+  push:
+    branches:
+      - aws
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Load AWS .env from secret
+        shell: bash
+        run: |
+          cat <<'EOF' > .env
+          ${{ secrets.AWS_DOTENV }}
+          EOF
+
+          set -a
+          source .env
+          set +a
+
+          required=(
+            AWS_ACCESS_KEY_ID
+            AWS_SECRET_ACCESS_KEY
+            AWS_REGION
+            ECR_REPOSITORY
+            ECS_CLUSTER
+            ECS_SERVICE
+            ECS_CONTAINER_NAME
+            ECS_TASK_FAMILY
+            ECS_TASK_EXECUTION_ROLE_ARN
+            ECS_TASK_ROLE_ARN
+            ECS_LOG_GROUP
+            ECS_LOG_STREAM_PREFIX
+          )
+
+          for key in "${required[@]}"; do
+            if [ -z "${!key}" ]; then
+              echo "Missing required key in AWS_DOTENV: $key"
+              exit 1
+            fi
+          done
+
+          {
+            echo "AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID"
+            echo "AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY"
+            echo "AWS_REGION=$AWS_REGION"
+            echo "ECR_REPOSITORY=$ECR_REPOSITORY"
+            echo "ECS_CLUSTER=$ECS_CLUSTER"
+            echo "ECS_SERVICE=$ECS_SERVICE"
+            echo "ECS_CONTAINER_NAME=$ECS_CONTAINER_NAME"
+            echo "ECS_TASK_FAMILY=$ECS_TASK_FAMILY"
+            echo "ECS_TASK_EXECUTION_ROLE_ARN=$ECS_TASK_EXECUTION_ROLE_ARN"
+            echo "ECS_TASK_ROLE_ARN=$ECS_TASK_ROLE_ARN"
+            echo "ECS_LOG_GROUP=$ECS_LOG_GROUP"
+            echo "ECS_LOG_STREAM_PREFIX=$ECS_LOG_STREAM_PREFIX"
+          } >> "$GITHUB_ENV"
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Ensure ECR repository exists
+        shell: bash
+        run: |
+          aws ecr describe-repositories --repository-names "${ECR_REPOSITORY}" >/dev/null 2>&1 || \
+          aws ecr create-repository --repository-name "${ECR_REPOSITORY}" >/dev/null
+
+      - name: Build and push Docker image
+        id: build-image
+        shell: bash
+        run: |
+          IMAGE_URI="${{ steps.login-ecr.outputs.registry }}/${ECR_REPOSITORY}"
+          IMAGE_TAG="${GITHUB_SHA}"
+
+          docker build -t "${IMAGE_URI}:${IMAGE_TAG}" -t "${IMAGE_URI}:latest" .
+          docker push "${IMAGE_URI}:${IMAGE_TAG}"
+          docker push "${IMAGE_URI}:latest"
+
+          echo "image=${IMAGE_URI}:${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Install envsubst
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gettext-base
+
+      - name: Render ECS task definition from template
+        shell: bash
+        run: |
+          envsubst < deploy/ecs-task-definition.json.tpl > deploy/ecs-task-definition.json
+
+      - name: Fill image in ECS task definition
+        id: task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: deploy/ecs-task-definition.json
+          container-name: ${{ env.ECS_CONTAINER_NAME }}
+          image: ${{ steps.build-image.outputs.image }}
+
+      - name: Deploy ECS task definition
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.task-def.outputs.task-definition }}
+          service: ${{ env.ECS_SERVICE }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          wait-for-service-stability: true
