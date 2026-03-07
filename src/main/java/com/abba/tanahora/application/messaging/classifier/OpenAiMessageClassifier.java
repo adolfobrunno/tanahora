@@ -60,9 +60,9 @@ public class OpenAiMessageClassifier implements MessageClassifier {
                 
                 Retorne seguindo o padrao indicado.
                 Para o campo 'dosage', informe a quantidade do medicamento a ser tomada,
-                se nao houver essa informacao na mensagem, retorne 'nao informado'.
+                se nao houver essa informacao na mensagem, retorne 'não informado'.
                 Para o campo 'patientName', informe o nome do paciente quando houver
-                (ex: "para Maria"), caso contrario retorne 'nao informado'.
+                (ex: "para Maria"), caso contrario retorne %s.
                 
                 O type do retorno deve ser inferido de acordo com a mensagem recebida.
                 Por exemplo:
@@ -98,6 +98,6 @@ public class OpenAiMessageClassifier implements MessageClassifier {
                 Hoje e %s.
                 
                 """;
-        return openAiApiService.sendPrompt(String.format(prompt, message.getBody(), OffsetDateTime.now()), AiMessageProcessorDto.class);
+        return openAiApiService.sendPrompt(String.format(prompt, message.getBody(), message.getContactName(), OffsetDateTime.now()), AiMessageProcessorDto.class);
     }
 }

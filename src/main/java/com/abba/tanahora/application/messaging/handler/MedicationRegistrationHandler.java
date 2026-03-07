@@ -52,13 +52,7 @@ public class MedicationRegistrationHandler implements MessageHandler {
 
         User user = userService.register(message.getWhatsappId(), message.getContactName());
         PatientRef patient = patientResolverService.resolve(user, dto.getPatientName(), null, true);
-        if (patient == null) {
-            notificationService.sendNotification(user, BasicWhatsAppMessage.builder()
-                    .to(user.getWhatsappId())
-                    .message("Qual paciente devo usar para esse lembrete?")
-                    .build());
-            return;
-        }
+
         Medication medication = new Medication();
         medication.setName(dto.getMedication());
         medication.setDosage(dto.getDosage());

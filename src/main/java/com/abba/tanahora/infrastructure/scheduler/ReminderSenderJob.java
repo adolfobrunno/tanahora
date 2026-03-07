@@ -58,6 +58,7 @@ public class ReminderSenderJob {
                             .text(reminderText)
                             .button(new Button().setType(ButtonType.REPLY).setReply(new Reply().setTitle("Tomei").setId("tomei_btn")))
                             .button(new Button().setType(ButtonType.REPLY).setReply(new Reply().setTitle("Adiar").setId("adiar_btn")))
+                            .button(new Button().setType(ButtonType.REPLY).setReply(new Reply().setTitle("Pular").setId("pular_btn")))
                             .build());
                     reminderEventService.updateDispatch(event, messageId);
                 } else {
@@ -67,6 +68,7 @@ public class ReminderSenderJob {
                             .text(reminder.createSendReminderMessage())
                             .button(new Button().setType(ButtonType.REPLY).setReply(new Reply().setTitle("Tomei").setId("tomei_btn")))
                             .button(new Button().setType(ButtonType.REPLY).setReply(new Reply().setTitle("Adiar").setId("adiar_btn")))
+                            .button(new Button().setType(ButtonType.REPLY).setReply(new Reply().setTitle("Pular").setId("pular_btn")))
                             .build());
                     reminderEventService.registerDispatch(reminder, messageId);
                 }

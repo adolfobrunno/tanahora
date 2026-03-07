@@ -11,12 +11,18 @@ import com.abba.tanahora.domain.service.NotificationService;
 import com.abba.tanahora.domain.service.PatientResolverService;
 import com.abba.tanahora.domain.service.ReminderService;
 import com.abba.tanahora.domain.service.UserService;
+import com.abba.tanahora.domain.utils.Constants;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
+import java.text.Normalizer;
+import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Component
 @Slf4j
@@ -43,32 +49,106 @@ public class CancelMedicationHandler implements MessageHandler {
 
         String userId = message.getWhatsappId();
         User user = userService.findByWhatsappId(userId);
-        var patient = patientResolverService.resolve(user, dto.getPatientName(), null, false);
-        if (patient == null) {
-            notificationService.sendNotification(user,
-                    BasicWhatsAppMessage.builder().to(user.getWhatsappId()).message("Nao identifiquei o paciente. Informe o nome para cancelar.").build());
+
+        String medicationName = dto.getMedication();
+        List<Reminder> remindersByMedication = reminderService.getByUser(user)
+                .stream()
+                .filter(reminder -> reminder.getMedication() != null)
+                .filter(reminder -> reminder.getMedication().getName() != null)
+                .filter(reminder -> reminder.getMedication().getName().equalsIgnoreCase(medicationName))
+                .collect(Collectors.toList());
+
+        if (isPatientNotProvided(dto.getPatientName())) {
+            handleWithoutPatient(user, medicationName, remindersByMedication);
             return;
         }
 
-        Optional<Reminder> reminderMatch = reminderService.getByUser(user)
+        var patient = patientResolverService.resolve(user, dto.getPatientName(), null, false);
+
+        Optional<Reminder> reminderMatch = remindersByMedication
                 .stream()
                 .filter(reminder -> patient.getId().equals(reminder.getPatientId()))
-                .filter(reminder -> reminder.getMedication().getName().equalsIgnoreCase(dto.getMedication()))
                 .findFirst();
 
         if (reminderMatch.isPresent()) {
-            reminderService.cancelReminder(reminderMatch.get());
-            notificationService.sendNotification(user, BasicWhatsAppMessage.builder().to(user.getWhatsappId()).message(reminderMatch.get().createCancelNotification()).build());
+            cancelAndNotify(user, reminderMatch.get());
         } else {
-            log.warn("Medication {} not found for user {}", dto.getMedication(), userId);
-            notificationService.sendNotification(user, BasicWhatsAppMessage.builder().to(user.getWhatsappId()).message(String.format(
-                    """
-                    Ops! Parece que a medicação que você informou não está registrada.
-                    
-                    Confira se o nome "%s" está correto ou se você já havia cancelado essa medicação anteriormente.
-                    
-                    """, dto.getMedication())
-            ).build());
+            sendMedicationNotFound(user, medicationName);
         }
+    }
+
+    private void handleWithoutPatient(User user, String medicationName, List<Reminder> remindersByMedication) {
+        if (remindersByMedication.isEmpty()) {
+            sendMedicationNotFound(user, medicationName);
+            return;
+        }
+
+        List<Reminder> distinctPatientMatches = remindersByMedication.stream()
+                .collect(Collectors.toMap(Reminder::getPatientId, reminder -> reminder, (first, ignored) -> first))
+                .values()
+                .stream()
+                .toList();
+
+        if (distinctPatientMatches.size() == 1) {
+            cancelAndNotify(user, distinctPatientMatches.getFirst());
+            return;
+        }
+
+        String options = distinctPatientMatches.stream()
+                .map(reminder -> "- " + patientLabel(reminder))
+                .collect(Collectors.joining("\n"));
+
+        notificationService.sendNotification(user, BasicWhatsAppMessage.builder()
+                .to(user.getWhatsappId())
+                .message(String.format(
+                        """
+                                Encontrei mais de um paciente com o medicamento "%s".
+                                Repita o cancelamento informando o nome correto do paciente..
+                                
+                                Opções:
+                                %s
+                                """, medicationName, options))
+                .build());
+    }
+
+    private void sendMedicationNotFound(User user, String medicationName) {
+        log.warn("Medication {} not found for user {}", medicationName, user.getWhatsappId());
+        notificationService.sendNotification(user, BasicWhatsAppMessage.builder().to(user.getWhatsappId()).message(String.format(
+                """
+                        Ops! Parece que a medicação que você informou não está registrada.
+                        
+                        Confira se o nome "%s" está correto ou se você já havia cancelado essa medicação anteriormente.
+                        """, medicationName)
+        ).build());
+    }
+
+    private void cancelAndNotify(User user, Reminder reminder) {
+        reminderService.cancelReminder(reminder);
+        notificationService.sendNotification(user, BasicWhatsAppMessage.builder()
+                .to(user.getWhatsappId())
+                .message(reminder.createCancelNotification())
+                .build());
+    }
+
+    private String patientLabel(Reminder reminder) {
+        if (reminder.getPatientName() != null && !reminder.getPatientName().isBlank()) {
+            return reminder.getPatientName();
+        }
+        return "paciente";
+    }
+
+    private boolean isPatientNotProvided(String patientName) {
+        if (patientName == null || patientName.isBlank()) {
+            return true;
+        }
+
+        String normalized = normalize(patientName);
+        return normalized.equals(normalize(Constants.NOT_INFORMED)) || normalized.equals("nao informado");
+    }
+
+    private String normalize(String value) {
+        String normalized = Normalizer.normalize(Objects.toString(value, ""), Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "");
+        return normalized.toLowerCase(Locale.ROOT).trim();
     }
 }

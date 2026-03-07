@@ -51,14 +51,21 @@ public class ReplyReminderEventHandler implements MessageHandler {
         Optional<ReminderEvent> reminderEvent = reminderEventService.updateStatusFromResponse(message.getReplyToId(), dto.getType().name(), message.getWhatsappId());
         reminderEvent.ifPresent(event -> {
             Reminder reminder = event.getReminder();
-            String messageToResponse = dto.getType() == MessageReceivedType.REMINDER_RESPONSE_TAKEN ?
-                    reminder.createTakenConfirmationMessage() : reminder.createSkippedConfirmationMessage();
+            String messageToResponse = handleResponseMessage(dto.getType(), reminder);
             notificationService.sendNotification(reminder.getUser(), BasicWhatsAppMessage.builder()
                     .to(reminder.getUser().getWhatsappId())
                     .message(messageToResponse)
                     .build());
             reminderService.updateReminderNextDispatch(reminder);
         });
+    }
+
+    private String handleResponseMessage(MessageReceivedType type, Reminder reminder) {
+        return switch (type) {
+            case REMINDER_RESPONSE_TAKEN -> reminder.createTakenConfirmationMessage();
+            case REMINDER_RESPONSE_SKIPPED -> reminder.createSkippedConfirmationMessage();
+            default -> "";
+        };
     }
 
 
@@ -77,7 +84,7 @@ public class ReplyReminderEventHandler implements MessageHandler {
         if (reminderEvent.isEmpty()) {
             notificationService.sendNotification(user, BasicWhatsAppMessage.builder()
                     .to(user.getWhatsappId())
-                    .message("Nao encontrei lembrete para adiar.")
+                    .message("Nâo encontrei lembrete para adiar.")
                     .build());
             return;
         }
@@ -96,7 +103,7 @@ public class ReplyReminderEventHandler implements MessageHandler {
                 : "daqui a 1 hora";
         notificationService.sendNotification(user, BasicWhatsAppMessage.builder()
                 .to(user.getWhatsappId())
-                .message(String.format("Ok, adiado. Vou lembrar novamente as %s.", time))
+                .message(String.format("Ok, adiado. Vou lembrar novamente às %s.", time))
                 .build());
     }
 }

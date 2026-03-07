@@ -143,9 +143,7 @@ public class Reminder {
 
     public String createSkippedConfirmationMessage() {
         return String.format("""
-                ❌ Entendido. Registramos que o paciente %s esqueceu de tomar o medicamento: %s.
-                
-                Tente não esquecer da próxima vez!
+                ❌ Entendido. Registramos que o paciente %s nâo tomou o medicamento: %s.
                 """, patientLabel(), medication.getName());
     }
 
