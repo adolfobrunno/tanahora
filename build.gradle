@@ -36,7 +36,6 @@ dependencies {
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.6.0'
     implementation 'org.springframework.ai:spring-ai-starter-model-openai'
     implementation 'com.openai:openai-java:3.5.3'
-    implementation 'com.github.Bindambc:whatsapp-business-java-api:v0.6.1'
     implementation 'com.squareup.okhttp3:okhttp:4.12.0'
     implementation 'io.vavr:vavr:0.10.4'
     implementation 'org.dmfs:lib-recur:0.17.1'

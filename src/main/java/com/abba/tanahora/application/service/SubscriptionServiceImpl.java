@@ -184,13 +184,17 @@ public class SubscriptionServiceImpl implements SubscriptionService {
             return;
         }
         String normalized = eventType.toLowerCase();
-        if (normalized.contains("payment")) {
+        if (normalized.equalsIgnoreCase("payment")) {
             syncPayment(resourceId);
             return;
         }
-        if (normalized.contains("preapproval") || normalized.contains("subscription")) {
+        if (normalized.equalsIgnoreCase("subscription_preapproval")) {
             syncSubscription(resourceId);
+            return;
         }
+
+        log.warn("Ignoring unknown webhook event type={} resourceId={}", eventType, resourceId);
+
     }
 
     private void syncSubscription(String gatewaySubscriptionId) {
