@@ -363,14 +363,14 @@ public class PrescriptionImportServiceImpl implements PrescriptionImportService 
 
     private PatientRef resolvePatient(User user, String patientName) {
         String normalizedName = isNotInformed(patientName) ? "Paciente" : patientName;
-        PatientRef patient = patientResolverService.resolve(user, normalizedName, null, true);
-        if (patient == null) {
+        Optional<PatientRef> patient = patientResolverService.resolve(user, normalizedName, null, true);
+        if (patient.isEmpty()) {
             patient = patientResolverService.resolve(user, "Paciente", null, true);
         }
-        if (patient == null) {
+        if (patient.isEmpty()) {
             throw new IllegalStateException("Unable to resolve patient");
         }
-        return patient;
+        return patient.orElse(null);
     }
 
     private boolean supportsMediaType(String messageType, String mimeType) {

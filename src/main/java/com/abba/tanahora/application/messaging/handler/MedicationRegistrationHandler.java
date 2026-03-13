@@ -19,6 +19,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
+import java.util.Optional;
+
 @Component
 @Order(200)
 @RequiredArgsConstructor
@@ -51,13 +53,13 @@ public class MedicationRegistrationHandler implements MessageHandler {
         }
 
         User user = userService.register(message.getWhatsappId(), message.getContactName());
-        PatientRef patient = patientResolverService.resolve(user, dto.getPatientName(), null, true);
+        Optional<PatientRef> patient = patientResolverService.resolve(user, dto.getPatientName(), null, true);
 
         Medication medication = new Medication();
         medication.setName(dto.getMedication());
         medication.setDosage(dto.getDosage());
         try {
-            Reminder reminder = reminderService.scheduleMedication(user, patient, medication, normalizedRrule);
+            Reminder reminder = reminderService.scheduleMedication(user, patient.orElse(null), medication, normalizedRrule);
             notificationService.sendNotification(user, BasicWhatsAppMessage.builder()
                     .to(user.getWhatsappId())
                     .message(reminder.createNewReminderMessage())

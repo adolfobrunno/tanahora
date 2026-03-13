@@ -19,7 +19,7 @@ public class PatientResolverServiceImpl implements PatientResolverService {
     private final UserRepository userRepository;
 
     @Override
-    public PatientRef resolve(User user, String patientName, String lastPatientId, boolean createIfMissing) {
+    public Optional<PatientRef> resolve(User user, String patientName, String lastPatientId, boolean createIfMissing) {
         if (user == null) {
             throw new IllegalArgumentException("user cannot be null");
         }
@@ -41,28 +41,27 @@ public class PatientResolverServiceImpl implements PatientResolverService {
                     .findFirst();
 
             if (match.isPresent()) {
-                return match.get();
+                return match;
             }
 
             if (!createIfMissing) {
-                return null;
+                return Optional.empty();
             }
 
             PatientRef created = new PatientRef();
             created.setName(patientName.trim());
             patients.add(created);
             userRepository.save(user);
-            return created;
+            return Optional.of(created);
         }
 
         if (lastPatientId == null || lastPatientId.isBlank()) {
-            return null;
+            return Optional.empty();
         }
 
         return patients.stream()
                 .filter(patient -> lastPatientId.equals(patient.getId()))
-                .findFirst()
-                .orElse(null);
+                .findFirst();
     }
 
     private String normalizeName(String name) {

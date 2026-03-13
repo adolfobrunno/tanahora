@@ -65,9 +65,14 @@ public class CancelMedicationHandler implements MessageHandler {
 
         var patient = patientResolverService.resolve(user, dto.getPatientName(), null, false);
 
+        if (patient.isEmpty()) {
+            cancelAndNotify(user, remindersByMedication.getFirst());
+            return;
+        }
+
         Optional<Reminder> reminderMatch = remindersByMedication
                 .stream()
-                .filter(reminder -> patient.getId().equals(reminder.getPatientId()))
+                .filter(reminder -> patient.get().getId().equals(reminder.getPatientId()))
                 .findFirst();
 
         if (reminderMatch.isPresent()) {

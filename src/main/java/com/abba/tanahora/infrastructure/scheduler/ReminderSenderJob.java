@@ -49,9 +49,7 @@ public class ReminderSenderJob {
                     if (event.getSnoozedUntil() != null && event.getSnoozedUntil().isAfter(now)) {
                         return;
                     }
-                    String reminderText = event.getSnoozedUntil() != null
-                            ? reminder.createSendReminderMessage()
-                            : reminder.createMissedReminderMessage();
+                    String reminderText = reminder.createMissedReminderMessage();
                     String messageId = notificationService.sendNotification(reminder.getUser(), InteractiveWhatsAppMessage
                             .builder()
                             .to(reminder.getUser().getWhatsappId())
