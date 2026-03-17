@@ -45,6 +45,7 @@ public class ReminderSenderJob {
                     if (event.getResponseReceivedAt() == null &&
                             reminder.getNextDispatch().plusMinutes(15).isBefore(now)) {
                         reminderEventService.updateStatus(event, ReminderEventStatus.MISSED);
+                        return;
                     }
                     if (event.getSnoozedUntil() != null && event.getSnoozedUntil().isAfter(now)) {
                         return;
