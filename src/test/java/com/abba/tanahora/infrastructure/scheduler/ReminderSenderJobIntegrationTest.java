@@ -6,6 +6,7 @@ import com.abba.tanahora.domain.model.ReminderEvent;
 import com.abba.tanahora.domain.model.ReminderEventStatus;
 import com.abba.tanahora.domain.model.User;
 import com.abba.tanahora.domain.repository.ReminderEventRepository;
+import com.abba.tanahora.domain.repository.ReminderRepository;
 import com.abba.tanahora.domain.service.NotificationService;
 import com.abba.tanahora.support.MongoCollectionsCleanupExtension;
 import org.junit.jupiter.api.BeforeEach;
@@ -52,10 +53,19 @@ class ReminderSenderJobIntegrationTest {
     private ReminderSenderJob reminderSenderJob;
 
     @Autowired
+    private ReminderMissedJob reminderMissedJob;
+
+    @Autowired
+    private ReminderSnoozedJob reminderSnoozedJob;
+
+    @Autowired
     private ReminderSenderJobDbScripts scripts;
 
     @Autowired
     private ReminderEventRepository reminderEventRepository;
+
+    @Autowired
+    private ReminderRepository reminderRepository;
 
     @Autowired
     private NotificationCaptureStore notificationCaptureStore;
@@ -85,20 +95,23 @@ class ReminderSenderJobIntegrationTest {
     }
 
     @Test
-    @DisplayName("Given pending reminder event overdue by more than 15 minutes, " +
+    @DisplayName("Given pending reminder event overdue by more than 30 minutes, " +
             "when job runs, " +
             "then it marks event as MISSED and does not send new notification")
     void givenPendingOverdueEventWhenJobRunsThenMarksAsMissedWithoutSending() {
         // Given
         ReminderSenderJobDbScripts.SeedWithPendingEvent seed = scripts.insertReminderWithPendingOverdueEventScript();
+        var previousNextDispatch = seed.reminder().getNextDispatch();
 
         // When
-        reminderSenderJob.sendRemindNotification();
+        reminderMissedJob.markMissedReminders();
 
         // Then
-        assertThat(notificationCaptureStore.getSentNotifications()).isEmpty();
+        assertThat(notificationCaptureStore.getSentNotifications()).hasSize(1);
         ReminderEvent updated = reminderEventRepository.findById(seed.pendingEvent().getId()).orElseThrow();
         assertThat(updated.getStatus()).isEqualTo(ReminderEventStatus.MISSED);
+        Reminder updatedReminder = reminderRepository.findById(seed.reminder().getId()).orElseThrow();
+        assertThat(updatedReminder.getNextDispatch()).isAfter(previousNextDispatch);
     }
 
     @Test
@@ -126,6 +139,25 @@ class ReminderSenderJobIntegrationTest {
                     assertThat(event.getReminder().getId()).isEqualTo(reminder.getId());
                     assertThat(event.getWhatsappMessageId()).isEqualTo("msg-1");
                 });
+    }
+
+    @Test
+    @DisplayName("Given reminder with due SNOOZED event, " +
+            "when snoozed job runs, " +
+            "then it sends a new notification and puts event back to PENDING")
+    void givenReminderWithDueSnoozedEventWhenSnoozedJobRunsThenResendsAndSetsPending() {
+        // Given
+        ReminderSenderJobDbScripts.SeedWithSnoozedEvent seed = scripts.insertReminderWithSnoozedDueEventScript();
+
+        // When
+        reminderSnoozedJob.sendSnoozedNotifications();
+
+        // Then
+        assertThat(notificationCaptureStore.getSentNotifications()).hasSize(1);
+        ReminderEvent updated = reminderEventRepository.findById(seed.snoozedEvent().getId()).orElseThrow();
+        assertThat(updated.getStatus()).isEqualTo(ReminderEventStatus.PENDING);
+        assertThat(updated.getSnoozedUntil()).isNull();
+        assertThat(updated.getWhatsappMessageId()).isEqualTo("msg-1");
     }
 
     @TestConfiguration

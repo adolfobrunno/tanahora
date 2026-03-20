@@ -121,7 +121,8 @@ public class ReplyReminderEventHandler implements MessageHandler {
         }
 
         ReminderEvent event = reminderEvent.get();
-        if (event.getStatus() == ReminderEventStatus.SNOOZED) {
+        if (event.getStatus() == ReminderEventStatus.MISSED) {
+            reminderService.updateReminderNextDispatch(event.getReminder());
             notificationService.sendNotification(user, BasicWhatsAppMessage.builder()
                     .to(user.getWhatsappId())
                     .message("Limite de 2 adiamentos atingido. Marquei este lembrete como esquecido.")

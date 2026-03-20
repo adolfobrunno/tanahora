@@ -16,6 +16,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -23,36 +24,34 @@ import java.util.Optional;
 @Slf4j
 @ConditionalOnProperty(prefix = "tictacmed.scheduler", name = "enabled", havingValue = "true", matchIfMissing = true)
 @RequiredArgsConstructor
-public class ReminderSenderJob {
+public class ReminderSnoozedJob {
 
     private final ReminderService reminderService;
     private final ReminderEventService reminderEventService;
     private final NotificationService notificationService;
 
-
-    @Scheduled(fixedDelayString = "${tanahora.scheduler.send-reminders-delay-ms}")
-    public void sendRemindNotification() {
-
+    @Scheduled(fixedDelayString = "${tanahora.scheduler.send-snoozed-delay-ms:60000}")
+    public void sendSnoozedNotifications() {
         List<Reminder> reminders = reminderService.getNextRemindersToNotify();
-        log.info("ReminderSenderJob started: remindersToEvaluate={}", reminders.size());
+        OffsetDateTime now = OffsetDateTime.now();
+        log.info("ReminderSnoozedJob started: remindersToEvaluate={} now={}", reminders.size(), now);
 
         reminders.forEach(reminder -> {
             if (!reminder.isActive()) {
-                log.debug("Reminder skipped: reason=INACTIVE reminderId={}", reminder.getId());
-                return;
-            }
-
-            Optional<ReminderEvent> pendingEvent = reminderEventService.findPendingByReminder(reminder);
-            if (pendingEvent.isPresent()) {
-                log.debug("Reminder skipped: reason=PENDING_EVENT_EXISTS reminderId={} eventId={}",
-                        reminder.getId(), pendingEvent.get().getId());
+                log.debug("Reminder skipped for snoozed check: reason=INACTIVE reminderId={}", reminder.getId());
                 return;
             }
 
             Optional<ReminderEvent> snoozedEvent = reminderEventService.findLatestByReminderAndStatus(reminder, ReminderEventStatus.SNOOZED);
-            if (snoozedEvent.isPresent()) {
-                log.debug("Reminder skipped: reason=SNOOZED_EVENT_EXISTS reminderId={} eventId={} snoozedUntil={}",
-                        reminder.getId(), snoozedEvent.get().getId(), snoozedEvent.get().getSnoozedUntil());
+            if (snoozedEvent.isEmpty()) {
+                log.debug("Reminder skipped for snoozed check: reason=NO_SNOOZED_EVENT reminderId={}", reminder.getId());
+                return;
+            }
+
+            ReminderEvent event = snoozedEvent.get();
+            if (event.getSnoozedUntil() == null || event.getSnoozedUntil().isAfter(now)) {
+                log.debug("Reminder skipped for snoozed resend: reason=SNOOZE_NOT_DUE reminderId={} eventId={} snoozedUntil={}",
+                        reminder.getId(), event.getId(), event.getSnoozedUntil());
                 return;
             }
 
@@ -64,12 +63,12 @@ public class ReminderSenderJob {
                     .button(new Button().setType(ButtonType.REPLY).setReply(new Reply().setTitle("Adiar").setId("adiar_btn")))
                     .button(new Button().setType(ButtonType.REPLY).setReply(new Reply().setTitle("Pular").setId("pular_btn")))
                     .build());
-            reminderEventService.registerDispatch(reminder, messageId);
-            log.info("Reminder sent: reminderId={} userId={} messageId={}",
-                    reminder.getId(), reminder.getUser().getId(), messageId);
+
+            reminderEventService.updateDispatch(event, messageId);
+            log.info("Snoozed reminder resent: reminderId={} eventId={} userId={} messageId={}",
+                    reminder.getId(), event.getId(), reminder.getUser().getId(), messageId);
         });
 
-        log.info("ReminderSenderJob finished");
+        log.info("ReminderSnoozedJob finished");
     }
-
 }

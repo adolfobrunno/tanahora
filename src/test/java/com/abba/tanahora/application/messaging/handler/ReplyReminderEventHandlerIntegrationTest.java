@@ -105,7 +105,7 @@ class ReplyReminderEventHandlerIntegrationTest {
         // Then
         assertThat(supported).isTrue();
         ReminderEvent updated = reminderEventRepository.findById(seed.event().getId()).orElseThrow();
-        assertThat(updated.getStatus()).isEqualTo(ReminderEventStatus.PENDING);
+        assertThat(updated.getStatus()).isEqualTo(ReminderEventStatus.SNOOZED);
         assertThat(updated.getSnoozeCount()).isEqualTo(1);
         assertThat(updated.getSnoozedUntil()).isNotNull();
         assertThat(notificationCaptureStore.getSentNotifications()).hasSize(1);

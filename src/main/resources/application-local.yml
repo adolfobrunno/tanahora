@@ -35,6 +35,8 @@ tanahora:
     enabled: ${TANAHORA_SCHEDULER_ENABLED:true}
     fixed-delay-ms: ${TANAHORA_SCHEDULER_FIXED_DELAY_MS:60000}
     send-reminders-delay-ms: ${TANAHORA_SCHEDULER_SEND_REMINDERS_DELAY_MS:300000}
+    check-missed-delay-ms: ${TANAHORA_SCHEDULER_CHECK_MISSED_DELAY_MS:60000}
+    send-snoozed-delay-ms: ${TANAHORA_SCHEDULER_SEND_SNOOZED_DELAY_MS:60000}
 
 logging:
   level:

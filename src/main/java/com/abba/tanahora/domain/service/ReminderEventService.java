@@ -13,6 +13,8 @@ public interface ReminderEventService {
 
     Optional<ReminderEvent> findPendingByReminder(Reminder reminder);
 
+    Optional<ReminderEvent> findLatestByReminderAndStatus(Reminder reminder, ReminderEventStatus status);
+
     void updateStatus(ReminderEvent reminderEvent, ReminderEventStatus reminderEventStatus);
 
     void updateDispatch(ReminderEvent event, String whatsappMessageId);

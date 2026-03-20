@@ -41,6 +41,11 @@ public class ReminderEventServiceImpl implements ReminderEventService {
     }
 
     @Override
+    public Optional<ReminderEvent> findLatestByReminderAndStatus(Reminder reminder, ReminderEventStatus status) {
+        return reminderEventRepository.findFirstByReminderAndStatusOrderBySentAtDesc(reminder, status);
+    }
+
+    @Override
     public void updateStatus(ReminderEvent reminderEvent, ReminderEventStatus reminderEventStatus) {
         reminderEvent.setStatus(reminderEventStatus);
         reminderEventRepository.save(reminderEvent);
@@ -50,6 +55,8 @@ public class ReminderEventServiceImpl implements ReminderEventService {
     public void updateDispatch(ReminderEvent event, String whatsappMessageId) {
         event.setWhatsappMessageId(whatsappMessageId);
         event.setSentAt(OffsetDateTime.now());
+        event.setStatus(ReminderEventStatus.PENDING);
+        event.setResponseReceivedAt(null);
         event.setSnoozedUntil(null);
         reminderEventRepository.save(event);
     }
@@ -106,6 +113,8 @@ public class ReminderEventServiceImpl implements ReminderEventService {
         }
 
         reminderEvent.setSnoozedUntil(OffsetDateTime.now().plus(snoozeDuration));
+        reminderEvent.setStatus(ReminderEventStatus.SNOOZED);
+        reminderEvent.setResponseReceivedAt(OffsetDateTime.now());
         reminderEvent.setSnoozeCount(reminderEvent.getSnoozeCount() + 1);
         reminderEventRepository.save(reminderEvent);
         return Optional.of(reminderEvent);
@@ -118,7 +127,7 @@ public class ReminderEventServiceImpl implements ReminderEventService {
         return switch (messageReceivedType) {
             case REMINDER_RESPONSE_TAKEN -> ReminderEventStatus.TAKEN;
             case REMINDER_RESPONSE_SKIPPED -> ReminderEventStatus.SKIPPED;
-            case REMINDER_RESPONSE_SNOOZED -> ReminderEventStatus.PENDING;
+            case REMINDER_RESPONSE_SNOOZED -> ReminderEventStatus.SNOOZED;
             default -> ReminderEventStatus.MISSED;
         };
     }

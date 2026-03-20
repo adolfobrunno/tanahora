@@ -31,7 +31,7 @@ public class ReminderSenderJobDbScripts {
 
     public SeedWithPendingEvent insertReminderWithPendingOverdueEventScript() {
         User user = insertUserScript("pending-overdue");
-        Reminder reminder = insertReminderScript(user, OffsetDateTime.now().minusMinutes(25));
+        Reminder reminder = insertReminderScript(user, OffsetDateTime.now().minusMinutes(40));
 
         ReminderEvent event = new ReminderEvent();
         event.setReminder(reminder);
@@ -39,11 +39,30 @@ public class ReminderSenderJobDbScripts {
         event.setWhatsappMessageId("msg-old-pending");
         event.setPatientId(reminder.getPatientId());
         event.setPatientName(reminder.getPatientName());
-        event.setSentAt(OffsetDateTime.now().minusMinutes(20));
+        event.setSentAt(OffsetDateTime.now().minusMinutes(31));
         event.setStatus(ReminderEventStatus.PENDING);
         event = reminderEventRepository.save(event);
 
         return new SeedWithPendingEvent(reminder, event);
+    }
+
+    public SeedWithSnoozedEvent insertReminderWithSnoozedDueEventScript() {
+        User user = insertUserScript("snoozed-due");
+        Reminder reminder = insertReminderScript(user, OffsetDateTime.now().minusMinutes(40));
+
+        ReminderEvent event = new ReminderEvent();
+        event.setReminder(reminder);
+        event.setUserWhatsappId(user.getWhatsappId());
+        event.setWhatsappMessageId("msg-old-snoozed");
+        event.setPatientId(reminder.getPatientId());
+        event.setPatientName(reminder.getPatientName());
+        event.setSentAt(OffsetDateTime.now().minusMinutes(35));
+        event.setResponseReceivedAt(OffsetDateTime.now().minusMinutes(34));
+        event.setStatus(ReminderEventStatus.SNOOZED);
+        event.setSnoozedUntil(OffsetDateTime.now().minusMinutes(1));
+        event = reminderEventRepository.save(event);
+
+        return new SeedWithSnoozedEvent(reminder, event);
     }
 
     public Reminder insertReminderWithPreviousMissedEventScript() {
@@ -92,5 +111,8 @@ public class ReminderSenderJobDbScripts {
     }
 
     public record SeedWithPendingEvent(Reminder reminder, ReminderEvent pendingEvent) {
+    }
+
+    public record SeedWithSnoozedEvent(Reminder reminder, ReminderEvent snoozedEvent) {
     }
 }
