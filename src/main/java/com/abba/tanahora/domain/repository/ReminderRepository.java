@@ -15,6 +15,10 @@ public interface ReminderRepository extends MongoRepository<Reminder, UUID> {
 
     List<Reminder> findByUserAndStatus(User user, ReminderStatus status);
 
+    List<Reminder> findByStatus(ReminderStatus status);
+
+    long countByStatus(ReminderStatus status);
+
     default List<Reminder> findPendingNextDispatch(OffsetDateTime now) {
         return findByNextDispatchLessThanEqualAndStatus(now.plusMinutes(5), ReminderStatus.ACTIVE);
     }
