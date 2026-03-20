@@ -15,6 +15,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static com.abba.tanahora.domain.utils.Constants.NOT_INFORMED;
+
 @Component
 @RequiredArgsConstructor
 public class OpenAiMessageClassifier implements MessageClassifier {
@@ -83,6 +85,7 @@ public class OpenAiMessageClassifier implements MessageClassifier {
                 - BYHOUR aceita apenas valores de 0 a 23 (nunca use 24)
                 - BYMINUTE aceita apenas 0 a 59
                 - BYSECOND aceita apenas 0 a 59
+                - Se não for informado o limite, defina como daqui a um ano
                 - Se usar FREQ=HOURLY;INTERVAL=N, nao use BYHOUR, BYMINUTE ou BYSECOND na mesma regra
                 - Se for "a cada 8 horas", use FREQ=HOURLY;INTERVAL=8 (sem BYHOUR/BYMINUTE/BYSECOND)
                 - Se for "a cada 12 horas", use FREQ=HOURLY;INTERVAL=12 (sem BYHOUR/BYMINUTE/BYSECOND)
@@ -98,6 +101,6 @@ public class OpenAiMessageClassifier implements MessageClassifier {
                 Hoje e %s.
                 
                 """;
-        return openAiApiService.sendPrompt(String.format(prompt, message.getBody(), message.getContactName(), OffsetDateTime.now()), AiMessageProcessorDto.class);
+        return openAiApiService.sendPrompt(String.format(prompt, message.getBody(), NOT_INFORMED, OffsetDateTime.now()), AiMessageProcessorDto.class);
     }
 }

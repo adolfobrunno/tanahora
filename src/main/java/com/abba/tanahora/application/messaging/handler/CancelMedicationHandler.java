@@ -5,6 +5,8 @@ import com.abba.tanahora.application.dto.MessageReceivedType;
 import com.abba.tanahora.application.messaging.AIMessage;
 import com.abba.tanahora.application.messaging.classifier.MessageClassifier;
 import com.abba.tanahora.application.notification.BasicWhatsAppMessage;
+import com.abba.tanahora.application.notification.InteractiveWhatsAppMessage;
+import com.abba.tanahora.domain.model.PendingUserAction;
 import com.abba.tanahora.domain.model.Reminder;
 import com.abba.tanahora.domain.model.User;
 import com.abba.tanahora.domain.service.NotificationService;
@@ -12,6 +14,9 @@ import com.abba.tanahora.domain.service.PatientResolverService;
 import com.abba.tanahora.domain.service.ReminderService;
 import com.abba.tanahora.domain.service.UserService;
 import com.abba.tanahora.domain.utils.Constants;
+import com.whatsapp.api.domain.messages.Button;
+import com.whatsapp.api.domain.messages.Reply;
+import com.whatsapp.api.domain.messages.type.ButtonType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.annotation.Order;
@@ -30,6 +35,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class CancelMedicationHandler implements MessageHandler {
 
+    static final String PATIENT_BUTTON_PREFIX = "cancel_patient:";
+
     private final MessageClassifier messageClassifier;
     private final UserService userService;
     private final ReminderService reminderService;
@@ -39,16 +46,20 @@ public class CancelMedicationHandler implements MessageHandler {
     @Override
     public boolean supports(AIMessage message) {
         AiMessageProcessorDto dto = messageClassifier.classify(message);
-        return dto.getType() == MessageReceivedType.REMINDER_CANCEL;
+        return dto != null && dto.getType() == MessageReceivedType.REMINDER_CANCEL;
     }
 
     @Override
     public void handle(AIMessage message) {
+        User user = userService.findByWhatsappId(message.getWhatsappId());
+        if (user == null) {
+            return;
+        }
 
         AiMessageProcessorDto dto = messageClassifier.classify(message);
-
-        String userId = message.getWhatsappId();
-        User user = userService.findByWhatsappId(userId);
+        if (dto == null || dto.getType() != MessageReceivedType.REMINDER_CANCEL) {
+            return;
+        }
 
         String medicationName = dto.getMedication();
         List<Reminder> remindersByMedication = reminderService.getByUser(user)
@@ -58,15 +69,19 @@ public class CancelMedicationHandler implements MessageHandler {
                 .filter(reminder -> reminder.getMedication().getName().equalsIgnoreCase(medicationName))
                 .collect(Collectors.toList());
 
+        if (!user.isPremium()) {
+            handleFreeUserCancellation(user, medicationName, remindersByMedication);
+            return;
+        }
+
         if (isPatientNotProvided(dto.getPatientName())) {
-            handleWithoutPatient(user, medicationName, remindersByMedication);
+            handlePremiumWithoutPatient(user, medicationName, remindersByMedication);
             return;
         }
 
         var patient = patientResolverService.resolve(user, dto.getPatientName(), null, false);
-
         if (patient.isEmpty()) {
-            cancelAndNotify(user, remindersByMedication.getFirst());
+            sendMedicationNotFound(user, medicationName);
             return;
         }
 
@@ -77,12 +92,25 @@ public class CancelMedicationHandler implements MessageHandler {
 
         if (reminderMatch.isPresent()) {
             cancelAndNotify(user, reminderMatch.get());
-        } else {
-            sendMedicationNotFound(user, medicationName);
+            user.clearPendingAction();
+            userService.save(user);
+            return;
         }
+
+        sendMedicationNotFound(user, medicationName);
     }
 
-    private void handleWithoutPatient(User user, String medicationName, List<Reminder> remindersByMedication) {
+    private void handleFreeUserCancellation(User user, String medicationName, List<Reminder> remindersByMedication) {
+        if (remindersByMedication.isEmpty()) {
+            sendMedicationNotFound(user, medicationName);
+            return;
+        }
+        cancelAndNotify(user, remindersByMedication.getFirst());
+        user.clearPendingAction();
+        userService.save(user);
+    }
+
+    private void handlePremiumWithoutPatient(User user, String medicationName, List<Reminder> remindersByMedication) {
         if (remindersByMedication.isEmpty()) {
             sendMedicationNotFound(user, medicationName);
             return;
@@ -96,33 +124,50 @@ public class CancelMedicationHandler implements MessageHandler {
 
         if (distinctPatientMatches.size() == 1) {
             cancelAndNotify(user, distinctPatientMatches.getFirst());
+            user.clearPendingAction();
+            userService.save(user);
             return;
         }
 
-        String options = distinctPatientMatches.stream()
-                .map(reminder -> "- " + patientLabel(reminder))
-                .collect(Collectors.joining("\n"));
+        user.setPendingAction(PendingUserAction.CANCEL_MEDICATION_PATIENT);
+        user.setPendingCancelContext(medicationName,
+                distinctPatientMatches.stream().map(reminder -> reminder.getId().toString()).toList());
+        userService.save(user);
+        sendAskPatientNameWithButtons(user, medicationName, distinctPatientMatches);
+    }
 
-        notificationService.sendNotification(user, BasicWhatsAppMessage.builder()
+    private void sendAskPatientNameWithButtons(User user, String medicationName, List<Reminder> remindersByMedication) {
+        var builder = InteractiveWhatsAppMessage.builder()
                 .to(user.getWhatsappId())
-                .message(String.format(
-                        """
-                                Encontrei mais de um paciente com o medicamento "%s".
-                                Repita o cancelamento informando o nome correto do paciente..
-                                
-                                Opções:
-                                %s
-                                """, medicationName, options))
-                .build());
+                .text(String.format("Encontrei mais de um paciente com o medicamento \"%s\". Selecione o paciente:", medicationName));
+
+        remindersByMedication.forEach(reminder -> builder.button(new Button()
+                .setType(ButtonType.REPLY)
+                .setReply(new Reply()
+                        .setId(PATIENT_BUTTON_PREFIX + reminder.getPatientId())
+                        .setTitle(limitTitle(patientLabel(reminder))))));
+
+        notificationService.sendNotification(user, builder.build());
+    }
+
+    private String limitTitle(String label) {
+        if (label == null || label.isBlank()) {
+            return "Paciente";
+        }
+        String trimmed = label.trim();
+        if (trimmed.length() <= 20) {
+            return trimmed;
+        }
+        return trimmed.substring(0, 20);
     }
 
     private void sendMedicationNotFound(User user, String medicationName) {
         log.warn("Medication {} not found for user {}", medicationName, user.getWhatsappId());
         notificationService.sendNotification(user, BasicWhatsAppMessage.builder().to(user.getWhatsappId()).message(String.format(
                 """
-                        Ops! Parece que a medicação que você informou não está registrada.
+                        Ops! Parece que a medicacao que voce informou nao esta registrada.
                         
-                        Confira se o nome "%s" está correto ou se você já havia cancelado essa medicação anteriormente.
+                        Confira se o nome \"%s\" esta correto ou se voce ja havia cancelado essa medicacao anteriormente.
                         """, medicationName)
         ).build());
     }

@@ -36,16 +36,30 @@ public class ReplyReminderEventHandler implements MessageHandler {
     @Override
     public boolean supports(AIMessage message) {
         AiMessageProcessorDto dto = messageClassifier.classify(message);
+        if (dto == null || dto.getType() == null) {
+            return isPossibleReminderReply(message);
+        }
         return dto.getType() == MessageReceivedType.REMINDER_RESPONSE_TAKEN ||
-                dto.getType() == MessageReceivedType.REMINDER_RESPONSE_SNOOZED;
+                dto.getType() == MessageReceivedType.REMINDER_RESPONSE_SNOOZED ||
+                dto.getType() == MessageReceivedType.REMINDER_RESPONSE_SKIPPED ||
+                isPossibleReminderReply(message);
     }
 
     @Override
     public void handle(AIMessage message) {
         log.info("Updating reminder event status for message id={} whatsappId={}", message.getId(), message.getWhatsappId());
         AiMessageProcessorDto dto = messageClassifier.classify(message);
+        if (dto == null || dto.getType() == null) {
+            notifyUnrecognizedResponse(message);
+            return;
+        }
         if (dto.getType() == MessageReceivedType.REMINDER_RESPONSE_SNOOZED) {
             handleSnooze(message);
+            return;
+        }
+        if (dto.getType() != MessageReceivedType.REMINDER_RESPONSE_TAKEN &&
+                dto.getType() != MessageReceivedType.REMINDER_RESPONSE_SKIPPED) {
+            notifyUnrecognizedResponse(message);
             return;
         }
         Optional<ReminderEvent> reminderEvent = reminderEventService.updateStatusFromResponse(message.getReplyToId(), dto.getType().name(), message.getWhatsappId());
@@ -66,6 +80,23 @@ public class ReplyReminderEventHandler implements MessageHandler {
             case REMINDER_RESPONSE_SKIPPED -> reminder.createSkippedConfirmationMessage();
             default -> "";
         };
+    }
+
+    private boolean isPossibleReminderReply(AIMessage message) {
+        return message.getReplyToId() != null ||
+                message.getInteractiveButtonId() != null ||
+                "interactive".equalsIgnoreCase(message.getMessageType());
+    }
+
+    private void notifyUnrecognizedResponse(AIMessage message) {
+        var user = userService.findByWhatsappId(message.getWhatsappId());
+        if (user == null) {
+            return;
+        }
+        notificationService.sendNotification(user, BasicWhatsAppMessage.builder()
+                .to(user.getWhatsappId())
+                .message("Não entendi sua resposta. Escolha um dos botões anteriores: Tomei, Adiar ou Pular.")
+                .build());
     }
 
 

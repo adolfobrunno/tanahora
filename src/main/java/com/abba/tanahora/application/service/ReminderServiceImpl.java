@@ -32,6 +32,8 @@ public class ReminderServiceImpl implements ReminderService {
             throw new InvalidRruleException("rrule cannot be blank");
         }
 
+        patient = getPatientOrDefault(user, patient);
+
         if (canCreateReminder(user)) {
             Reminder reminder = new Reminder();
             reminder.setMedication(med);
@@ -93,4 +95,16 @@ public class ReminderServiceImpl implements ReminderService {
         List<Reminder> currents = reminderRepository.findByUserAndStatus(user, ReminderStatus.ACTIVE);
         return currents.isEmpty();
     }
+
+    private PatientRef getPatientOrDefault(User user, PatientRef patientRef) {
+
+        //return patientRef != null ? patientRef : def;
+        return Optional.ofNullable(patientRef).orElseGet(() -> {
+            var def = new PatientRef();
+            def.setName(user.getName());
+            return def;
+        });
+
+    }
+
 }

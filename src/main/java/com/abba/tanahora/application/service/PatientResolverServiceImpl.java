@@ -25,7 +25,7 @@ public class PatientResolverServiceImpl implements PatientResolverService {
         }
 
         if (Constants.NOT_INFORMED.equalsIgnoreCase(patientName)) {
-            patientName = user.getName();
+            return Optional.empty();
         }
 
         List<PatientRef> patients = user.getPatients();

@@ -27,6 +27,8 @@ public class User {
     private OffsetDateTime createdAt = OffsetDateTime.now();
     private PendingUserAction pendingAction;
     private OffsetDateTime pendingActionCreatedAt;
+    private String pendingCancelMedicationName;
+    private List<String> pendingCancelReminderIds = new ArrayList<>();
 
     private List<PatientRef> patients = new ArrayList<>();
 
@@ -53,6 +55,23 @@ public class User {
         this.plan = Plan.FREE;
         this.proSince = null;
         this.proUntil = null;
+    }
+
+    public void setPendingAction(PendingUserAction pendingAction) {
+        this.pendingAction = pendingAction;
+        this.pendingActionCreatedAt = OffsetDateTime.now();
+    }
+
+    public void clearPendingAction() {
+        this.pendingAction = null;
+        this.pendingActionCreatedAt = null;
+        this.pendingCancelMedicationName = null;
+        this.pendingCancelReminderIds = new ArrayList<>();
+    }
+
+    public void setPendingCancelContext(String medicationName, List<String> reminderIds) {
+        this.pendingCancelMedicationName = medicationName;
+        this.pendingCancelReminderIds = reminderIds == null ? new ArrayList<>() : new ArrayList<>(reminderIds);
     }
 
 }

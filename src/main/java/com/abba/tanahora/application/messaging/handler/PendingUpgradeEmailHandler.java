@@ -53,8 +53,7 @@ public class PendingUpgradeEmailHandler implements MessageHandler {
         }
 
         user.setEmail(email);
-        user.setPendingAction(null);
-        user.setPendingActionCreatedAt(null);
+        user.clearPendingAction();
         userService.save(user);
 
         UpgradeCheckoutResult checkout = subscriptionService.createOrReuseUpgradeLink(user.getWhatsappId(), message.getContactName());

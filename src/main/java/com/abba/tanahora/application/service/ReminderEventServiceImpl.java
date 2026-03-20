@@ -117,6 +117,7 @@ public class ReminderEventServiceImpl implements ReminderEventService {
 
         return switch (messageReceivedType) {
             case REMINDER_RESPONSE_TAKEN -> ReminderEventStatus.TAKEN;
+            case REMINDER_RESPONSE_SKIPPED -> ReminderEventStatus.SKIPPED;
             case REMINDER_RESPONSE_SNOOZED -> ReminderEventStatus.PENDING;
             default -> ReminderEventStatus.MISSED;
         };

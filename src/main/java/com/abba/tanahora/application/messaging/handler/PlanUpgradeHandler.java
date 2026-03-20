@@ -15,8 +15,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
-import java.time.OffsetDateTime;
-
 @Component
 @Order(500)
 @RequiredArgsConstructor
@@ -43,7 +41,6 @@ public class PlanUpgradeHandler implements MessageHandler {
         }
         if (user.getEmail() == null || user.getEmail().isBlank()) {
             user.setPendingAction(PendingUserAction.UPGRADE_EMAIL);
-            user.setPendingActionCreatedAt(OffsetDateTime.now());
             userService.save(user);
             notificationService.sendNotification(user,
                     BasicWhatsAppMessage.builder()
