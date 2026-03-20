@@ -26,6 +26,8 @@ spring:
 
 
 tanahora:
+  cors:
+    allowed-origins: ${TANAHORA_CORS_ALLOWED_ORIGINS:https://tanahora.fly.dev}
   whatsapp:
     enabled: ${TANAHORA_WHATSAPP_ENABLED:false}
     from-number: ${TANAHORA_WHATSAPP_FROM_NUMBER:"+0000000000"}
