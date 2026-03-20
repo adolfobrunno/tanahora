@@ -26,6 +26,11 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/backoffice")
+@CrossOrigin(
+        originPatterns = "*",
+        allowedHeaders = "*",
+        methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.OPTIONS}
+)
 @Tag(name = "Backoffice", description = "Operacoes administrativas para suporte e operacao manual")
 public class BackofficeController {
 
