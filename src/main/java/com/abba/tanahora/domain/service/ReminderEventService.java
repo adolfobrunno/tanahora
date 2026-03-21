@@ -5,6 +5,8 @@ import com.abba.tanahora.domain.model.ReminderEvent;
 import com.abba.tanahora.domain.model.ReminderEventStatus;
 
 import java.time.Duration;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 public interface ReminderEventService {
@@ -22,4 +24,6 @@ public interface ReminderEventService {
     Optional<ReminderEvent> updateStatusFromResponse(String replyToMessageId, String responseText, String userId);
 
     Optional<ReminderEvent> snoozeFromResponse(String replyToMessageId, String userId, Duration snoozeDuration, int maxSnoozes);
+
+    Map<String, List<ReminderEvent>> findTakenByUserIdGroupedByPatient(String userId);
 }

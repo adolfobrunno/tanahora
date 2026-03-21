@@ -13,6 +13,7 @@ public enum MessageReceivedType {
     PLAN_INFO,
     SUPPORT,
     CHECK_NEXT_DISPATCH,
+    CHECK_HISTORY,
     SHOW_ACTIVE_REMINDERS
 
 }
