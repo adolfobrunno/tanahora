@@ -141,7 +141,7 @@ public class PrescriptionImportServiceImpl implements PrescriptionImportService 
         List<Reminder> createdReminders = new ArrayList<>();
         try {
             for (PrescriptionExtractedReminder extractedReminder : prescriptionImport.getExtractedReminders()) {
-                PatientRef patient = resolvePatient(user, extractedReminder.getPatientName());
+                Patient patient = resolvePatient(user, extractedReminder.getPatientName());
                 Medication medication = new Medication();
                 medication.setName(defaultIfBlank(extractedReminder.getMedication(), "Medicamento"));
                 medication.setDosage(defaultIfBlank(extractedReminder.getDosage(), "nao informado"));
@@ -361,9 +361,9 @@ public class PrescriptionImportServiceImpl implements PrescriptionImportService 
         return sb.toString();
     }
 
-    private PatientRef resolvePatient(User user, String patientName) {
+    private Patient resolvePatient(User user, String patientName) {
         String normalizedName = isNotInformed(patientName) ? "Paciente" : patientName;
-        Optional<PatientRef> patient = patientResolverService.resolve(user, normalizedName, null, true);
+        Optional<Patient> patient = patientResolverService.resolve(user, normalizedName, null, true);
         if (patient.isEmpty()) {
             patient = patientResolverService.resolve(user, "Paciente", null, true);
         }

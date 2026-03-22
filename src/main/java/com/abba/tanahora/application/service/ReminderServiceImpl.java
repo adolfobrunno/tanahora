@@ -26,7 +26,7 @@ public class ReminderServiceImpl implements ReminderService {
     private final NotificationService notificationService;
 
     @Override
-    public Reminder scheduleMedication(User user, PatientRef patient, Medication med, String rrule) {
+    public Reminder scheduleMedication(User user, Patient patient, Medication med, String rrule) {
 
         if (rrule == null || rrule.isBlank()) {
             throw new InvalidRruleException("rrule cannot be blank");
@@ -49,10 +49,6 @@ public class ReminderServiceImpl implements ReminderService {
         }
     }
 
-    @Override
-    public Optional<OffsetDateTime> getNextDispatch(Reminder reminder) {
-        return Optional.ofNullable(reminder.getNextDispatch());
-    }
 
     @Override
     public List<Reminder> getNextRemindersToNotify() {
@@ -96,11 +92,11 @@ public class ReminderServiceImpl implements ReminderService {
         return currents.isEmpty();
     }
 
-    private PatientRef getPatientOrDefault(User user, PatientRef patientRef) {
+    private Patient getPatientOrDefault(User user, Patient patient) {
 
         //return patientRef != null ? patientRef : def;
-        return Optional.ofNullable(patientRef).orElseGet(() -> {
-            var def = new PatientRef();
+        return Optional.ofNullable(patient).orElseGet(() -> {
+            var def = new Patient();
             def.setName(user.getName());
             return def;
         });

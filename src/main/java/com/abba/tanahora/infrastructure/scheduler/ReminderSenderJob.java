@@ -61,7 +61,7 @@ public class ReminderSenderJob {
                     .to(reminder.getUser().getWhatsappId())
                     .text(reminder.createSendReminderMessage())
                     .button(new Button().setType(ButtonType.REPLY).setReply(new Reply().setTitle("Tomei").setId("tomei_btn")))
-                    .button(new Button().setType(ButtonType.REPLY).setReply(new Reply().setTitle("Adiar").setId("adiar_btn")))
+                    .button(new Button().setType(ButtonType.REPLY).setReply(new Reply().setTitle("Adiar por uma hora").setId("adiar_btn")))
                     .button(new Button().setType(ButtonType.REPLY).setReply(new Reply().setTitle("Pular").setId("pular_btn")))
                     .build());
             reminderEventService.registerDispatch(reminder, messageId);

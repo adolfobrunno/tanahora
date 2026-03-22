@@ -30,11 +30,7 @@ public class User {
     private String pendingCancelMedicationName;
     private List<String> pendingCancelReminderIds = new ArrayList<>();
 
-    private List<PatientRef> patients = new ArrayList<>();
-
-    public void enablePremium() {
-        applyPremiumCycle(1);
-    }
+    private List<Patient> patients = new ArrayList<>();
 
     public void applyPremiumCycle(int months) {
         int cycleMonths = Math.max(1, months);

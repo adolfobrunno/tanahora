@@ -1,7 +1,7 @@
 package com.abba.tanahora.domain.service;
 
 import com.abba.tanahora.domain.model.Medication;
-import com.abba.tanahora.domain.model.PatientRef;
+import com.abba.tanahora.domain.model.Patient;
 import com.abba.tanahora.domain.model.Reminder;
 import com.abba.tanahora.domain.model.User;
 
@@ -11,8 +11,7 @@ import java.util.Optional;
 
 public interface ReminderService {
 
-    Reminder scheduleMedication(User user, PatientRef patient, Medication med, String rrule);
-    Optional<OffsetDateTime> getNextDispatch(Reminder reminder);
+    Reminder scheduleMedication(User user, Patient patient, Medication med, String rrule);
 
     List<Reminder> getNextRemindersToNotify();
 
