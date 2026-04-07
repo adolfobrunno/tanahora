@@ -24,6 +24,7 @@ import java.util.TimeZone;
 import java.util.UUID;
 
 import static com.abba.tanahora.domain.utils.Constants.BRAZIL_ZONEID;
+import static com.abba.tanahora.domain.utils.Constants.NOT_INFORMED;
 
 @Document(collection = "reminders")
 @CompoundIndex(name = "dispatch_idx", def = "{'nextDispatch': 1, 'status': 1}")
@@ -173,14 +174,14 @@ public class Reminder {
 
     private String patientLabel() {
         if (patientName == null || patientName.isBlank()) {
-            return "paciente";
+            return NOT_INFORMED;
         }
         return patientName;
     }
 
     private String safeDosage() {
         if (medication == null || medication.getDosage() == null || medication.getDosage().isBlank()) {
-            return "não informado";
+            return NOT_INFORMED;
         }
         return medication.getDosage();
     }

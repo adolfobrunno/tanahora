@@ -13,7 +13,7 @@ spring:
 
   data:
     mongodb:
-      uri: mongodb://localhost:27017
+      uri: mongodb://root:secret@localhost:27017/ta-na-hora?authSource=admin
       database: ta-na-hora
 
   ai:
@@ -29,6 +29,7 @@ tanahora:
   whatsapp:
     enabled: true
     from-number: 540626902478219
+    template: ${TANAHORA_WHATSAPP_TEMPLATE:}
     verify-token: ${TANAHORA_WHATSAPP_VERIFY_TOKEN:fAkE_vErIfY_tOkEn}
     access-token: ${TANAHORA_WHATSAPP_ACCESS_TOKEN:FAKE_ACCESS_TOKEN}
   scheduler:

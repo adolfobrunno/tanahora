@@ -32,6 +32,7 @@ tanahora:
   whatsapp:
     enabled: ${TANAHORA_WHATSAPP_ENABLED:false}
     from-number: ${TANAHORA_WHATSAPP_FROM_NUMBER:"+0000000000"}
+    template: ${TANAHORA_WHATSAPP_TEMPLATE:}
     verify-token: ${TANAHORA_WHATSAPP_VERIFY_TOKEN:fAkE_vErIfY_tOkEn}
     access-token: ${TANAHORA_WHATSAPP_ACCESS_TOKEN:FAKE_ACCESS_TOKEN}
   scheduler:

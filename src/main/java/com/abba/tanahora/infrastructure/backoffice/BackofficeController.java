@@ -1,6 +1,8 @@
 package com.abba.tanahora.infrastructure.backoffice;
 
 import com.abba.tanahora.application.notification.BasicWhatsAppMessage;
+import com.abba.tanahora.application.notification.TemplateWhatsAppMessage;
+import com.abba.tanahora.application.notification.WhatsAppTemplates;
 import com.abba.tanahora.domain.model.Reminder;
 import com.abba.tanahora.domain.model.ReminderStatus;
 import com.abba.tanahora.domain.model.User;
@@ -63,14 +65,19 @@ public class BackofficeController {
                                                        required = true,
                                                        content = @Content(
                                                                schema = @Schema(implementation = BackofficeSendMessageRequest.class),
-                                                               examples = @ExampleObject(value = """
-                                                                       {"message":"Mensagem do backoffice"}
-                                                                       """)
+                                                               examples = {
+                                                                       @ExampleObject(name = "Texto", value = """
+                                                                               {"message":"Mensagem do backoffice"}
+                                                                               """),
+                                                                       @ExampleObject(name = "Template", value = """
+                                                                               {"template":"RECALL_TO_ACTION","templateParameters":["Joao","Paracetamol"]}
+                                                                               """)
+                                                               }
                                                        )
                                                )
                                                @RequestBody BackofficeSendMessageRequest request) {
-        if (request == null || request.message() == null || request.message().isBlank()) {
-            return ResponseEntity.badRequest().body(Map.of("error", "message is required"));
+        if (request == null) {
+            return ResponseEntity.badRequest().body(Map.of("error", "request body is required"));
         }
 
         User user = userService.findByWhatsappId(whatsappId);
@@ -78,10 +85,11 @@ public class BackofficeController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "user not found"));
         }
 
-        String messageId = notificationService.sendNotification(user, BasicWhatsAppMessage.builder()
-                .to(user.getWhatsappId())
-                .message(request.message())
-                .build());
+        String messageId = sendBackofficeMessage(user, request);
+
+        if (messageId == null || messageId.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "message or template is required"));
+        }
 
         return ResponseEntity.ok(new BackofficeSendMessageResponse(messageId));
     }
@@ -203,8 +211,12 @@ public class BackofficeController {
 
     @Schema(name = "BackofficeSendMessageRequest")
     public record BackofficeSendMessageRequest(
-            @Schema(description = "Texto da mensagem a ser enviada", example = "Mensagem do backoffice")
-            String message) {
+            @Schema(description = "Texto da mensagem a ser enviada (quando nao usar template)", example = "Mensagem do backoffice")
+            String message,
+            @Schema(description = "Template a ser usado (quando enviar template)", implementation = WhatsAppTemplates.class)
+            WhatsAppTemplates template,
+            @Schema(description = "Parametros do template em ordem", example = "[\"Joao\", \"Paracetamol\"]")
+            List<String> templateParameters) {
     }
 
     @Schema(name = "BackofficeSendMessageResponse")
@@ -257,5 +269,28 @@ public class BackofficeController {
             long activeUsers,
             @Schema(example = "89")
             long activeReminders) {
+    }
+
+    private String sendBackofficeMessage(User user, BackofficeSendMessageRequest request) {
+        if (request.template() != null) {
+            TemplateWhatsAppMessage.Builder builder = TemplateWhatsAppMessage.builder()
+                    .to(user.getWhatsappId())
+                    .template(request.template());
+
+            if (request.templateParameters() != null) {
+                request.templateParameters().forEach(builder::bodyParameter);
+            }
+
+            return notificationService.sendNotification(user, builder.build());
+        }
+
+        if (request.message() == null || request.message().isBlank()) {
+            return "";
+        }
+
+        return notificationService.sendNotification(user, BasicWhatsAppMessage.builder()
+                .to(user.getWhatsappId())
+                .message(request.message())
+                .build());
     }
 }

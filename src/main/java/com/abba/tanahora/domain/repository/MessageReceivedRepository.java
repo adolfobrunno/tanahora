@@ -10,6 +10,8 @@ public interface MessageReceivedRepository extends MongoRepository<MessageReceiv
 
     List<MessageReceived> findAllByStatus(MessageReceivedStatus status);
 
+    MessageReceived findTopByWhatsappIdOrderByReceivedAtDesc(String whatsappId);
+
     default List<MessageReceived> findAllPending() {
         return findAllByStatus(MessageReceivedStatus.PENDING);
     }
