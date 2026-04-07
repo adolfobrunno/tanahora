@@ -4,7 +4,7 @@ import lombok.Getter;
 
 public enum WhatsAppTemplates {
 
-    SEND_REMINDER("en_US"),
+    SEND_REMINDER("en"),
     RECALL_TO_ACTION("pt_BR");
 
     @Getter
