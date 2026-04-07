@@ -8,7 +8,7 @@ import com.abba.tanahora.application.messaging.classifier.MessageClassifier;
 import com.abba.tanahora.application.notification.BasicWhatsAppMessage;
 import com.abba.tanahora.domain.exceptions.InvalidRruleException;
 import com.abba.tanahora.domain.model.Medication;
-import com.abba.tanahora.domain.model.PatientRef;
+import com.abba.tanahora.domain.model.Patient;
 import com.abba.tanahora.domain.model.Reminder;
 import com.abba.tanahora.domain.model.User;
 import com.abba.tanahora.domain.service.NotificationService;
@@ -53,7 +53,7 @@ public class MedicationRegistrationHandler implements MessageHandler {
         }
 
         User user = userService.register(message.getWhatsappId(), message.getContactName());
-        Optional<PatientRef> patient = patientResolverService.resolve(user, dto.getPatientName(), null, true);
+        Optional<Patient> patient = patientResolverService.resolve(user, dto.getPatientName(), null, true);
 
         Medication medication = new Medication();
         medication.setName(dto.getMedication());

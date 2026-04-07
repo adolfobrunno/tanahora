@@ -6,7 +6,7 @@ import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @Data
-public class PatientRef {
+public class Patient {
 
     private String id = UUID.randomUUID().toString();
     private String name;

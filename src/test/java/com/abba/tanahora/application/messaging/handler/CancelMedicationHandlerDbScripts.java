@@ -23,22 +23,22 @@ public class CancelMedicationHandlerDbScripts {
 
     public Seed createFreeUserWithOneReminderScript(String medicationName, String patientName) {
         User user = createUser(false);
-        PatientRef patient = addPatient(user, patientName);
+        Patient patient = addPatient(user, patientName);
         Reminder reminder = createReminder(user, patient, medicationName);
         return new Seed(user, List.of(reminder));
     }
 
     public Seed createPremiumUserWithOneReminderScript(String medicationName, String patientName) {
         User user = createUser(true);
-        PatientRef patient = addPatient(user, patientName);
+        Patient patient = addPatient(user, patientName);
         Reminder reminder = createReminder(user, patient, medicationName);
         return new Seed(user, List.of(reminder));
     }
 
     public Seed createPremiumUserWithTwoPatientsSameMedicationScript(String medicationName, String firstPatient, String secondPatient) {
         User user = createUser(true);
-        PatientRef patientOne = addPatient(user, firstPatient);
-        PatientRef patientTwo = addPatient(user, secondPatient);
+        Patient patientOne = addPatient(user, firstPatient);
+        Patient patientTwo = addPatient(user, secondPatient);
 
         Reminder reminderOne = createReminder(user, patientOne, medicationName);
         Reminder reminderTwo = createReminder(user, patientTwo, medicationName);
@@ -61,15 +61,15 @@ public class CancelMedicationHandlerDbScripts {
         return userRepository.save(user);
     }
 
-    private PatientRef addPatient(User user, String patientName) {
-        PatientRef patient = new PatientRef();
+    private Patient addPatient(User user, String patientName) {
+        Patient patient = new Patient();
         patient.setName(patientName);
         user.getPatients().add(patient);
         userRepository.save(user);
         return patient;
     }
 
-    private Reminder createReminder(User user, PatientRef patient, String medicationName) {
+    private Reminder createReminder(User user, Patient patient, String medicationName) {
         Reminder reminder = new Reminder();
         reminder.setUser(user);
         reminder.setPatientId(patient.getId());

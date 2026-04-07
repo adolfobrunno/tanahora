@@ -1,6 +1,6 @@
 package com.abba.tanahora.application.service;
 
-import com.abba.tanahora.domain.model.PatientRef;
+import com.abba.tanahora.domain.model.Patient;
 import com.abba.tanahora.domain.model.User;
 import com.abba.tanahora.domain.repository.UserRepository;
 import com.abba.tanahora.domain.service.PatientResolverService;
@@ -19,7 +19,7 @@ public class PatientResolverServiceImpl implements PatientResolverService {
     private final UserRepository userRepository;
 
     @Override
-    public Optional<PatientRef> resolve(User user, String patientName, String lastPatientId, boolean createIfMissing) {
+    public Optional<Patient> resolve(User user, String patientName, String lastPatientId, boolean createIfMissing) {
         if (user == null) {
             throw new IllegalArgumentException("user cannot be null");
         }
@@ -28,7 +28,7 @@ public class PatientResolverServiceImpl implements PatientResolverService {
             return Optional.empty();
         }
 
-        List<PatientRef> patients = user.getPatients();
+        List<Patient> patients = user.getPatients();
         if (patients == null) {
             patients = new ArrayList<>();
             user.setPatients(patients);
@@ -36,7 +36,7 @@ public class PatientResolverServiceImpl implements PatientResolverService {
 
         if (patientName != null && !patientName.isBlank()) {
             String normalized = normalizeName(patientName);
-            Optional<PatientRef> match = patients.stream()
+            Optional<Patient> match = patients.stream()
                     .filter(patient -> normalizeName(patient.getName()).equals(normalized))
                     .findFirst();
 
@@ -48,7 +48,7 @@ public class PatientResolverServiceImpl implements PatientResolverService {
                 return Optional.empty();
             }
 
-            PatientRef created = new PatientRef();
+            Patient created = new Patient();
             created.setName(patientName.trim());
             patients.add(created);
             userRepository.save(user);

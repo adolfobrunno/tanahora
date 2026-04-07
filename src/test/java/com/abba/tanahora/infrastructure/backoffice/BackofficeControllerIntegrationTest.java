@@ -38,7 +38,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest(properties = {
         "spring.task.scheduling.enabled=false",
-        "tictacmed.scheduler.enabled=false"
+        "tanahora.scheduler.enabled=false"
 })
 @AutoConfigureMockMvc
 @Testcontainers(disabledWithoutDocker = true)
@@ -178,7 +178,7 @@ class BackofficeControllerIntegrationTest {
     }
 
     private Reminder createReminder(User user, String patientName, String medicationName, OffsetDateTime nextDispatch, ReminderStatus status) {
-        PatientRef patient = new PatientRef();
+        Patient patient = new Patient();
         patient.setName(patientName);
         user.getPatients().add(patient);
         userRepository.save(user);
@@ -208,7 +208,7 @@ class BackofficeControllerIntegrationTest {
         @Bean
         @Primary
         NotificationService notificationService(NotificationCaptureStore notificationCaptureStore) {
-            return (user, message) -> notificationCaptureStore.capture(user, message);
+            return notificationCaptureStore::capture;
         }
     }
 
