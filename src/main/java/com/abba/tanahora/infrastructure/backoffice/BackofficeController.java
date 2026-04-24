@@ -1,16 +1,23 @@
 package com.abba.tanahora.infrastructure.backoffice;
 
 import com.abba.tanahora.application.notification.BasicWhatsAppMessage;
+import com.abba.tanahora.application.notification.InteractiveWhatsAppMessage;
 import com.abba.tanahora.application.notification.TemplateWhatsAppMessage;
 import com.abba.tanahora.application.notification.WhatsAppTemplates;
 import com.abba.tanahora.domain.model.Reminder;
+import com.abba.tanahora.domain.model.ReminderEvent;
 import com.abba.tanahora.domain.model.ReminderStatus;
 import com.abba.tanahora.domain.model.User;
+import com.abba.tanahora.domain.repository.ReminderEventRepository;
 import com.abba.tanahora.domain.repository.ReminderRepository;
 import com.abba.tanahora.domain.repository.UserRepository;
 import com.abba.tanahora.domain.service.NotificationService;
+import com.abba.tanahora.domain.service.ReminderEventService;
 import com.abba.tanahora.domain.service.ReminderService;
 import com.abba.tanahora.domain.service.UserService;
+import com.whatsapp.api.domain.messages.Button;
+import com.whatsapp.api.domain.messages.Reply;
+import com.whatsapp.api.domain.messages.type.ButtonType;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
@@ -34,19 +41,25 @@ public class BackofficeController {
     private final UserService userService;
     private final ReminderService reminderService;
     private final NotificationService notificationService;
+    private final ReminderEventService reminderEventService;
     private final UserRepository userRepository;
     private final ReminderRepository reminderRepository;
+    private final ReminderEventRepository reminderEventRepository;
 
     public BackofficeController(UserService userService,
                                 ReminderService reminderService,
                                 NotificationService notificationService,
+                                ReminderEventService reminderEventService,
                                 UserRepository userRepository,
-                                ReminderRepository reminderRepository) {
+                                ReminderRepository reminderRepository,
+                                ReminderEventRepository reminderEventRepository) {
         this.userService = userService;
         this.reminderService = reminderService;
         this.notificationService = notificationService;
+        this.reminderEventService = reminderEventService;
         this.userRepository = userRepository;
         this.reminderRepository = reminderRepository;
+        this.reminderEventRepository = reminderEventRepository;
     }
 
     @PostMapping("/users/{whatsappId}/messages")
@@ -184,6 +197,47 @@ public class BackofficeController {
                 reminder.getMedication() != null ? reminder.getMedication().getName() : null,
                 reminder.getNextDispatch()
         ));
+    }
+
+    @PostMapping("/users/{whatsappId}/reminders/last/resend")
+    @Operation(
+            summary = "Reenviar ultimo lembrete de um usuario",
+            description = "Reenvia a mensagem do lembrete mais recente registrada em reminder_events para o whatsappId informado."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Lembrete reenviado"),
+            @ApiResponse(responseCode = "404", description = "Usuario ou ultimo lembrete nao encontrado"),
+            @ApiResponse(responseCode = "422", description = "Ultimo evento sem lembrete valido")
+    })
+    public ResponseEntity<?> resendLastReminderByUser(@PathVariable String whatsappId) {
+        User user = userService.findByWhatsappId(whatsappId);
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "user not found"));
+        }
+
+        Optional<ReminderEvent> lastReminderEvent = reminderEventRepository.findFirstByUserWhatsappIdOrderBySentAtDesc(whatsappId);
+        if (lastReminderEvent.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "last reminder not found"));
+        }
+
+        ReminderEvent event = lastReminderEvent.get();
+        Reminder reminder = event.getReminder();
+        if (reminder == null || reminder.getMedication() == null) {
+            return ResponseEntity.unprocessableEntity().body(Map.of("error", "last reminder event has no valid reminder"));
+        }
+
+        String messageId = notificationService.sendNotification(user, InteractiveWhatsAppMessage
+                .builder()
+                .to(user.getWhatsappId())
+                .text(reminder.createSendReminderMessage())
+                .button(new Button().setType(ButtonType.REPLY).setReply(new Reply().setTitle("Tomei").setId("tomei_btn")))
+                .button(new Button().setType(ButtonType.REPLY).setReply(new Reply().setTitle("Adiar por uma hora").setId("adiar_btn")))
+                .button(new Button().setType(ButtonType.REPLY).setReply(new Reply().setTitle("Pular").setId("pular_btn")))
+                .build());
+
+        reminderEventService.updateDispatch(event, messageId);
+
+        return ResponseEntity.ok(new BackofficeSendMessageResponse(messageId));
     }
 
     @GetMapping("/stats/active")

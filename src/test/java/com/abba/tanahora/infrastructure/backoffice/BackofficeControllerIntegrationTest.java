@@ -2,6 +2,7 @@ package com.abba.tanahora.infrastructure.backoffice;
 
 import com.abba.tanahora.application.notification.WhatsAppMessage;
 import com.abba.tanahora.domain.model.*;
+import com.abba.tanahora.domain.repository.ReminderEventRepository;
 import com.abba.tanahora.domain.repository.ReminderRepository;
 import com.abba.tanahora.domain.repository.UserRepository;
 import com.abba.tanahora.domain.service.NotificationService;
@@ -62,6 +63,9 @@ class BackofficeControllerIntegrationTest {
 
     @Autowired
     private ReminderRepository reminderRepository;
+
+    @Autowired
+    private ReminderEventRepository reminderEventRepository;
 
     @Autowired
     private NotificationCaptureStore notificationCaptureStore;
@@ -141,6 +145,52 @@ class BackofficeControllerIntegrationTest {
                 .andExpect(jsonPath("$.medicationName").value("Paracetamol"));
 
         assertThat(later.getId()).isNotEqualTo(earlier.getId());
+    }
+
+    @Test
+    @DisplayName("Given latest reminder event, when backoffice resends last reminder, then dispatches and updates event")
+    void givenLatestReminderEventWhenResendLastReminderThenDispatchesAndUpdatesEvent() throws Exception {
+        // Given
+        User user = createUser("5511999990007", Plan.PREMIUM);
+        Reminder olderReminder = createReminder(user, "Paciente 1", "Dipirona", OffsetDateTime.now().plusHours(1), ReminderStatus.ACTIVE);
+        Reminder latestReminder = createReminder(user, "Paciente 2", "Paracetamol", OffsetDateTime.now().plusHours(2), ReminderStatus.ACTIVE);
+
+        ReminderEvent olderEvent = new ReminderEvent();
+        olderEvent.setReminder(olderReminder);
+        olderEvent.setUserWhatsappId(user.getWhatsappId());
+        olderEvent.setPatientId(olderReminder.getPatientId());
+        olderEvent.setPatientName(olderReminder.getPatientName());
+        olderEvent.setWhatsappMessageId("old-msg-1");
+        olderEvent.setSentAt(OffsetDateTime.now().minusHours(2));
+        olderEvent.setStatus(ReminderEventStatus.TAKEN);
+        reminderEventRepository.save(olderEvent);
+
+        ReminderEvent latestEvent = new ReminderEvent();
+        latestEvent.setReminder(latestReminder);
+        latestEvent.setUserWhatsappId(user.getWhatsappId());
+        latestEvent.setPatientId(latestReminder.getPatientId());
+        latestEvent.setPatientName(latestReminder.getPatientName());
+        latestEvent.setWhatsappMessageId("old-msg-2");
+        latestEvent.setSentAt(OffsetDateTime.now().minusMinutes(10));
+        latestEvent.setStatus(ReminderEventStatus.SKIPPED);
+        reminderEventRepository.save(latestEvent);
+
+        // When / Then
+        mockMvc.perform(post("/backoffice/users/{whatsappId}/reminders/last/resend", user.getWhatsappId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.messageId").value("msg-1"));
+
+        assertThat(notificationCaptureStore.getSentNotifications()).hasSize(1);
+        assertThat(notificationCaptureStore.getSentNotifications().getFirst().payload())
+                .contains("Paracetamol")
+                .contains("Tomei")
+                .contains("Adiar por uma hora")
+                .contains("Pular");
+
+        ReminderEvent updatedEvent = reminderEventRepository.findById(latestEvent.getId()).orElseThrow();
+        assertThat(updatedEvent.getWhatsappMessageId()).isEqualTo("msg-1");
+        assertThat(updatedEvent.getStatus()).isEqualTo(ReminderEventStatus.PENDING);
+        assertThat(updatedEvent.getResponseReceivedAt()).isNull();
     }
 
     @Test
